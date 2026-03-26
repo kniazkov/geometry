@@ -3,7 +3,7 @@ package com.kniazkov.geometry;
 /**
  * Точка в двумерном пространстве.
  */
-public class Point2 {
+public class Point2 implements SegmentIntersection {
     /**
      * Допуск для геометрических сравнений.
      * Две координаты считаются равными, если отличаются не больше, чем на эту величину.
@@ -72,7 +72,6 @@ public class Point2 {
      * Приближенное сравнение двух точек с указанным допуском.
      */
     public boolean approximatelyEquals(Point2 other, double epsilon) {
-        return Math.abs(this.x - other.x) <= epsilon
-                && Math.abs(this.y - other.y) <= epsilon;
+        return Math.abs(this.x - other.x) <= epsilon && Math.abs(this.y - other.y) <= epsilon;
     }
 }
