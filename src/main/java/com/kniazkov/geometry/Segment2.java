@@ -1,5 +1,8 @@
 package com.kniazkov.geometry;
 
+/**
+ * Отрезок в двумерном пространстве.
+ */
 public class Segment2 {
     public final Point2 a;
     public final Point2 b;
