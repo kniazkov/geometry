@@ -1,6 +1,7 @@
 package com.kniazkov.geometry;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Трехмерная модель, представленная набором треугольников.
@@ -48,5 +49,44 @@ public class Model3 {
         this.maxX = maxX;
         this.maxY = maxY;
         this.maxZ = maxZ;
+    }
+
+    /**
+     * Строит сечение модели горизонтальной плоскостью z = layerZ.
+     *
+     * Возвращает список двумерных отрезков в плоскости XY.
+     *
+     * В список попадают только нормальные сечения треугольников,
+     * которые дают ровно две точки пересечения с плоскостью.
+     *
+     * Случаи, когда пересечение вырождается в одну точку, игнорируются.
+     * Случаи, когда треугольник целиком лежит в плоскости, тоже пока игнорируются,
+     * потому что они требуют отдельной политики обработки.
+     */
+    public List<Segment2> sliceAt(double layerZ) {
+        List<Segment2> result = new ArrayList<>();
+
+        for (Triangle3 triangle : triangles) {
+            List<Point3> intersection = triangle.intersectWithHorizontalPlane(layerZ);
+
+            /*
+                Обычный полезный случай: плоскость пересекает треугольник отрезком.
+             */
+            if (intersection.size() == 2) {
+                Point3 p1 = intersection.get(0);
+                Point3 p2 = intersection.get(1);
+
+                result.add(new Segment2(
+                    new Point2(p1.x, p1.y),
+                    new Point2(p2.x, p2.y)
+                ));
+            }
+
+            // intersection.size() == 0 -> нет пересечения
+            // intersection.size() == 1 -> касание вершиной, игнорируем
+            // intersection.size() == 3 -> треугольник лежит в плоскости, пока игнорируем
+        }
+
+        return result;
     }
 }
