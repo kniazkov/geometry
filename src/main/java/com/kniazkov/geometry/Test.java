@@ -7,11 +7,11 @@ import java.util.List;
 public class Test {
 
     public static void main(String[] args) throws IOException {
-        Model3IO io = Model3IOFactory.forFormat("stl");
+        ModelIO loader = ModelIOFactory.forFormat("stl");
 
-        Model3 model = measure(
+        Model model = measure(
             "Load STL",
-            () -> io.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");

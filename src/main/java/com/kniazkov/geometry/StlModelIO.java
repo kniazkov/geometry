@@ -21,19 +21,19 @@ import java.util.List;
  * Запись:
  * - только binary STL
  */
-public class StlModel3IO implements Model3IO {
+public class StlModelIO implements ModelIO {
 
     /**
      * Готовый singleton-экземпляр.
      * Класс не содержит состояния, так что одного экземпляра достаточно.
      */
-    public static final StlModel3IO INSTANCE = new StlModel3IO();
+    public static final StlModelIO INSTANCE = new StlModelIO();
 
-    private StlModel3IO() {
+    private StlModelIO() {
     }
 
     @Override
-    public Model3 load(Path path) throws IOException {
+    public Model load(Path path) throws IOException {
         if (isBinaryStl(path)) {
             return loadBinary(path);
         }
@@ -41,7 +41,7 @@ public class StlModel3IO implements Model3IO {
     }
 
     @Override
-    public void save(Path path, Model3 model) throws IOException {
+    public void save(Path path, Model model) throws IOException {
         try (var out = new BufferedOutputStream(Files.newOutputStream(path))) {
             writeBinaryStl(out, model);
         }
@@ -86,7 +86,7 @@ public class StlModel3IO implements Model3IO {
     /**
      * Читает binary STL.
      */
-    private Model3 loadBinary(Path path) throws IOException {
+    private Model loadBinary(Path path) throws IOException {
         List<Triangle3> triangles = new ArrayList<>();
 
         try (InputStream in = new BufferedInputStream(Files.newInputStream(path))) {
@@ -124,7 +124,7 @@ public class StlModel3IO implements Model3IO {
             }
         }
 
-        return new Model3(triangles);
+        return new Model(triangles);
     }
 
     /**
@@ -136,7 +136,7 @@ public class StlModel3IO implements Model3IO {
      *
      * Каждые 3 вершины образуют один треугольник.
      */
-    private Model3 loadAscii(Path path) throws IOException {
+    private Model loadAscii(Path path) throws IOException {
         List<Triangle3> triangles = new ArrayList<>();
         List<Point3> vertices = new ArrayList<>(3);
 
@@ -183,7 +183,7 @@ public class StlModel3IO implements Model3IO {
             throw new IllegalArgumentException("Incomplete triangle in ASCII STL");
         }
 
-        return new Model3(triangles);
+        return new Model(triangles);
     }
 
     /**
@@ -195,7 +195,7 @@ public class StlModel3IO implements Model3IO {
      * - далее по 50 байт на каждый треугольник:
      *   normal(3 float) + 3 вершины(по 3 float) + attribute byte count(ushort)
      */
-    private void writeBinaryStl(java.io.OutputStream out, Model3 model) throws IOException {
+    private void writeBinaryStl(java.io.OutputStream out, Model model) throws IOException {
         byte[] header = new byte[80];
         byte[] title = "kniazkov.com".getBytes(StandardCharsets.US_ASCII);
         System.arraycopy(title, 0, header, 0, Math.min(title.length, header.length));

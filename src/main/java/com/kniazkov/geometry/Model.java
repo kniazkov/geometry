@@ -6,7 +6,7 @@ import java.util.ArrayList;
 /**
  * Трехмерная модель, представленная набором треугольников.
  */
-public class Model3 {
+public class Model {
     public final List<Triangle3> triangles;
 
     public final double minX;
@@ -17,7 +17,7 @@ public class Model3 {
     public final double maxY;
     public final double maxZ;
 
-    public Model3(List<Triangle3> triangles) {
+    public Model(List<Triangle3> triangles) {
         if (triangles == null || triangles.isEmpty()) {
             throw new IllegalArgumentException("Model must contain at least one triangle");
         }
