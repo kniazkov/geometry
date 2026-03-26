@@ -4,10 +4,36 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 public class Test {
+
     public static void main(String[] args) throws IOException {
         Model3IO io = Model3IOFactory.forFormat("stl");
-        Model3 model = io.load(Paths.get("D:\\skull.stl"));
+
+        Model3 model = measure("Load STL", () -> io.load(Paths.get("D:\\ss.stl")));
         System.out.println("Loaded " + model.triangles.size() + " triangles");
-        io.save(Paths.get("D:\\skull2.stl"), model);
+
+        measure("Save STL", () -> {
+            io.save(Paths.get("D:\\ss2.stl"), model);
+            return null;
+        });
+    }
+
+    /**
+     * Выполняет код, печатает затраченное время в миллисекундах
+     * и возвращает результат.
+     */
+    private static <T> T measure(String label, ThrowingSupplier<T> action) throws IOException {
+        long start = System.nanoTime();
+        try {
+            return action.get();
+        } finally {
+            long elapsedNanos = System.nanoTime() - start;
+            double elapsedMs = elapsedNanos / 1_000_000.0;
+            System.out.printf("%s took %.3f ms%n", label, elapsedMs);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws IOException;
     }
 }
