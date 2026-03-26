@@ -18,6 +18,7 @@ import java.util.Locale;
  * - стиль линии
  */
 public class SvgBuilder {
+    private static final double MARGIN = 20.0;
 
     private final List<Group> groups = new ArrayList<>();
 
@@ -83,26 +84,25 @@ public class SvgBuilder {
             maxY = Math.max(maxY, Math.max(segment.a.y, segment.b.y));
         }
 
-        double svgMinX = minX / scale;
-        double svgMinY = minY / scale;
-        double svgWidth = (maxX - minX) / scale;
-        double svgHeight = (maxY - minY) / scale;
+        double contentWidth = (maxX - minX) / scale;
+        double contentHeight = (maxY - minY) / scale;
 
         // Чтобы SVG не схлопнулся в линию или точку.
-        if (svgWidth <= 0.0) {
-            svgWidth = 1.0;
+        if (contentWidth <= 0.0) {
+            contentWidth = 1.0;
         }
-        if (svgHeight <= 0.0) {
-            svgHeight = 1.0;
+        if (contentHeight <= 0.0) {
+            contentHeight = 1.0;
         }
+
+        double svgWidth = contentWidth + 2.0 * MARGIN;
+        double svgHeight = contentHeight + 2.0 * MARGIN;
 
         try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             writer.write(String.format(
                 Locale.US,
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%.6f %.6f %.6f %.6f\">\n",
-                svgMinX,
-                svgMinY,
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %.6f %.6f\">\n",
                 svgWidth,
                 svgHeight
             ));
@@ -110,7 +110,7 @@ public class SvgBuilder {
             writer.write("  <g fill=\"none\">\n");
 
             for (Group group : groups) {
-                writeGroup(writer, group, scale);
+                writeGroup(writer, group, scale, minX, minY, maxY);
             }
 
             writer.write("  </g>\n");
@@ -118,7 +118,14 @@ public class SvgBuilder {
         }
     }
 
-    private void writeGroup(BufferedWriter writer, Group group, double scale) throws IOException {
+    private void writeGroup(
+        BufferedWriter writer,
+        Group group,
+        double scale,
+        double minX,
+        double minY,
+        double maxY
+    ) throws IOException {
         writer.write(String.format(
             Locale.US,
             "    <g stroke=\"%s\" stroke-width=\"%.6f\"",
@@ -137,13 +144,15 @@ public class SvgBuilder {
         writer.write(">\n");
 
         for (Segment2 segment : group.segments) {
+            double x1 = MARGIN + (segment.a.x - minX) / scale;
+            double y1 = MARGIN + (maxY - segment.a.y) / scale;
+            double x2 = MARGIN + (segment.b.x - minX) / scale;
+            double y2 = MARGIN + (maxY - segment.b.y) / scale;
+
             writer.write(String.format(
                 Locale.US,
                 "      <line x1=\"%.6f\" y1=\"%.6f\" x2=\"%.6f\" y2=\"%.6f\" />\n",
-                segment.a.x / scale,
-                segment.a.y / scale,
-                segment.b.x / scale,
-                segment.b.y / scale
+                x1, y1, x2, y2
             ));
         }
 
