@@ -8,10 +8,11 @@ public class Test {
 
     public static void main(String[] args) throws IOException {
         ModelIO loader = ModelIOFactory.forFormat("stl");
+        SvgBuilder svg = new SvgBuilder();
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -25,12 +26,27 @@ public class Test {
 
         List<Segment2> segments = measure(
             "Slicing",
-            () -> model.sliceAt(1000)
+            () -> model.sliceAt(1500)
         );
 
-        SvgBuilder svg = new SvgBuilder();
-        svg.addSegments(segments, 1,  "blue", SvgStrokeStyle.SOLID);
-        svg.save(Paths.get("result.svg"), 1.0);
+        System.out.println("Obtain " + segments.size() + " segments after slicing");
+        //svg.addSegments(segments, 1, "red", SvgStrokeStyle.SOLID);
+
+        List<Contour> contours = measure(
+                "Assembling",
+                () -> {
+                    ContourAssembler assembler = new ContourAssembler(segments, 0.001);
+                    return assembler.assemble();
+                }
+        );
+
+        System.out.println("Obtain " + contours.size() + " contour" + (contours.size() > 1 ? "s" : "")  + " after assembling");
+
+        for (Contour contour : contours) {
+            svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
+        }
+
+        svg.save(Paths.get("result.svg"), 1);
     }
 
     /**
