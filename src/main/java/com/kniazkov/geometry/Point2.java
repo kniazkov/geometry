@@ -74,4 +74,12 @@ public class Point2 implements SegmentIntersection {
     public boolean approximatelyEquals(Point2 other, double epsilon) {
         return Math.abs(this.x - other.x) <= epsilon && Math.abs(this.y - other.y) <= epsilon;
     }
+
+    /**
+     * Преобразует точку в ячейку грубой пространственной сетки.
+     * Обе координаты округляются вниз.
+     */
+    public Cell toCell() {
+        return new Cell((int) Math.floor(x), (int) Math.floor(y));
+    }
 }
