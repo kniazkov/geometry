@@ -13,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -53,11 +53,9 @@ public class Test {
             System.out.println("Contour has " + contour.points.size() + " points before simplifying");
             Node2 begin = contour.toLinkedList();
             begin = Node2.removeStraight(begin);
-            begin = Node2.removeNodesByCriteria(
-                    begin,
-                    node -> node.distanceToPrev + node.distanceToNext < 50 && node.angle > Math.PI / 2 + Math.PI / 4 && !node.outer
-            );
-            begin = Node2.removeStraight(begin);
+            begin = Node2.removeShortSegments(begin, 1.0);
+            begin = Node2.removeOddAngleType(begin);
+            //begin = Node2.removeStraight(begin);
             System.out.println("Contour has " + Node2.toPoints(begin).size() + " points after simplifying");
             Node2 node = begin;
             do {

@@ -144,4 +144,37 @@ public class Node2 {
     public static Node2 removeStraight(Node2 start) {
         return removeNodesByCriteria(start, node -> node.straight);
     }
+
+    /**
+     * Удаляет узлы, у которых предыдущий сегмент короче заданного порога,
+     * но только если угол в узле достаточно тупой.
+     *
+     * Острые и почти прямые углы не удаляются, чтобы не портить основную форму.
+     */
+    public static Node2 removeShortSegments(Node2 start, double minDistance) {
+        final double minAngle = 2.0 * Math.PI / 3.0;
+
+        return removeNodesByCriteria(
+            start,
+            node -> node.angle > minAngle && node.distanceToPrev < minDistance
+        );
+    }
+
+    /**
+     * Удаляет узлы, у которых тип угла отличается от типов углов обоих соседей,
+     * при этом оба соседа имеют одинаковый тип угла, а сам угол узла
+     * близок к развернутому.
+     *
+     * Это помогает убирать одиночные "переключатели" кривизны,
+     * которые обычно являются артефактами ломаной аппроксимации.
+     */
+    public static Node2 removeOddAngleType(Node2 start) {
+        final double minAngle = 8.0 * Math.PI / 9.0; // 160 degrees
+
+        return removeNodesByCriteria(start, node ->
+            node.angle > minAngle &&
+                node.prev.outer == node.next.outer &&
+                node.outer != node.prev.outer
+        );
+    }
 }
