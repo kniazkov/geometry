@@ -2,6 +2,7 @@ package com.kniazkov.geometry;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 
 public class Test {
@@ -12,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\Models\\wd.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -26,7 +27,7 @@ public class Test {
 
         List<Segment2> segments = measure(
             "Slicing",
-            () -> model.sliceAt(1500)
+            () -> model.sliceAt(2500)
         );
 
         System.out.println("Obtain " + segments.size() + " segments after slicing");
@@ -47,9 +48,19 @@ public class Test {
                 () -> Contour.normalizeAll(contours)
         );
 
-
         for (Contour contour : normalized) {
-            svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
+            //svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
+            Node2 begin = contour.toLinkedList();
+            Node2 node = begin;
+            do {
+                svg.addSegments(
+                        Collections.singletonList(new Segment2(node.point, node.prev.point)),
+                        1,
+                        (node.straight ? "green" : (node.outer ? "blue" : "red")),
+                        SvgStrokeStyle.SOLID
+                );
+                node = node.next;
+            } while (node != begin);
         }
 
         svg.save(Paths.get("result.svg"), 1);
