@@ -51,6 +51,7 @@ public class Test {
         for (Contour contour : normalized) {
             //svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
             Node2 begin = contour.toLinkedList();
+            begin = Node2.removeStraight(begin);
             Node2 node = begin;
             do {
                 svg.addSegments(

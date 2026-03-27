@@ -71,4 +71,62 @@ public class Node2 {
 
         straight = Math.PI - angle <= STRAIGHT_ANGLE_EPSILON;
     }
+
+    /**
+     * Удаляет текущий узел из двусвязного циклического списка.
+     *
+     * После удаления соседние узлы соединяются друг с другом и пересчитывают свою геометрическую информацию.
+     */
+    public void remove() {
+        prev.next = next;
+        next.prev = prev;
+
+        prev.update();
+        next.update();
+
+        prev = this;
+        next = this;
+        distanceToPrev = 0;
+        distanceToNext = 0;
+        angle = 0;
+        outer = false;
+        straight = false;
+    }
+
+    /**
+     * Удаляет из двусвязного циклического списка все узлы с развернутым углом.
+     *
+     * Возвращает ссылку на любой оставшийся узел списка.
+     */
+    public static Node2 removeStraight(Node2 start) {
+        while (start.straight) {
+            start = start.next;
+        }
+
+        Node2 node = start;
+        do {
+            Node2 next = node.next;
+            if (node.straight) {
+                node.remove();
+            }
+            node = next;
+        } while (node != start);
+
+        return start;
+    }
+
+    /**
+     * Собирает точки кольца в список в порядке обхода.
+     */
+    public static List<Point2> toPoints(Node2 start) {
+        List<Point2> list = new ArrayList<>();
+        Node2 node = start;
+
+        do {
+            list.add(node.point);
+            node = node.next;
+        } while (node != start);
+
+        return list;
+    }
 }

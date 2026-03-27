@@ -116,9 +116,8 @@ public class Contour {
      */
     public Node2 toLinkedList() {
         List<Node2> nodes = new ArrayList<>(points.size());
-        Contour normalized = normalized();
 
-        for (Point2 point : normalized.points) {
+        for (Point2 point : normalized().points) {
             nodes.add(new Node2(point));
         }
 
