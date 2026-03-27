@@ -42,7 +42,13 @@ public class Test {
 
         System.out.println("Obtain " + contours.size() + " contour" + (contours.size() > 1 ? "s" : "")  + " after assembling");
 
-        for (Contour contour : contours) {
+        List<Contour> normalized = measure(
+                "Normalizing",
+                () -> Contour.normalizeAll(contours)
+        );
+
+
+        for (Contour contour : normalized) {
             svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
         }
 
