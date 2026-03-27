@@ -94,28 +94,6 @@ public class Node2 {
     }
 
     /**
-     * Удаляет из двусвязного циклического списка все узлы с развернутым углом.
-     *
-     * Возвращает ссылку на любой оставшийся узел списка.
-     */
-    public static Node2 removeStraight(Node2 start) {
-        while (start.straight) {
-            start = start.next;
-        }
-
-        Node2 node = start;
-        do {
-            Node2 next = node.next;
-            if (node.straight) {
-                node.remove();
-            }
-            node = next;
-        } while (node != start);
-
-        return start;
-    }
-
-    /**
      * Собирает точки кольца в список в порядке обхода.
      */
     public static List<Point2> toPoints(Node2 start) {
@@ -128,5 +106,42 @@ public class Node2 {
         } while (node != start);
 
         return list;
+    }
+
+    @FunctionalInterface
+    public interface RemoveCriteria {
+        boolean shouldRemove(Node2 node);
+    }
+
+    /**
+     * Удаляет из двусвязного циклического списка все узлы,
+     * удовлетворяющие заданному критерию.
+     *
+     * Возвращает ссылку на любой оставшийся узел списка.
+     */
+    public static Node2 removeNodesByCriteria(Node2 start, RemoveCriteria criteria) {
+        while (criteria.shouldRemove(start)) {
+            start = start.next;
+        }
+
+        Node2 node = start;
+        do {
+            Node2 next = node.next;
+            if (criteria.shouldRemove(node)) {
+                node.remove();
+            }
+            node = next;
+        } while (node != start);
+
+        return start;
+    }
+
+    /**
+     * Удаляет из двусвязного циклического списка все узлы с развернутым углом.
+     *
+     * Возвращает ссылку на любой оставшийся узел списка.
+     */
+    public static Node2 removeStraight(Node2 start) {
+        return removeNodesByCriteria(start, node -> node.straight);
     }
 }

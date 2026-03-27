@@ -13,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\Models\\wd.stl"))
+            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -27,7 +27,7 @@ public class Test {
 
         List<Segment2> segments = measure(
             "Slicing",
-            () -> model.sliceAt(2500)
+            () -> model.sliceAt(1500)
         );
 
         System.out.println("Obtain " + segments.size() + " segments after slicing");
@@ -50,8 +50,15 @@ public class Test {
 
         for (Contour contour : normalized) {
             //svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
+            System.out.println("Contour has " + contour.points.size() + " points before simplifying");
             Node2 begin = contour.toLinkedList();
             begin = Node2.removeStraight(begin);
+            begin = Node2.removeNodesByCriteria(
+                    begin,
+                    node -> node.distanceToPrev + node.distanceToNext < 50 && node.angle > Math.PI / 2 + Math.PI / 4 && !node.outer
+            );
+            begin = Node2.removeStraight(begin);
+            System.out.println("Contour has " + Node2.toPoints(begin).size() + " points after simplifying");
             Node2 node = begin;
             do {
                 svg.addSegments(
@@ -64,7 +71,7 @@ public class Test {
             } while (node != begin);
         }
 
-        svg.save(Paths.get("result.svg"), 1);
+        svg.save(Paths.get("result.svg"), 0.2);
     }
 
     /**
