@@ -64,6 +64,7 @@ public class Test {
                     return result;
                 }
         );
+
         Boolean hasIntersections = measure(
             "Checking for self-intersections",
             () -> ContourIntersectionFinder.hasAnyIntersections(simplified)
@@ -73,8 +74,13 @@ public class Test {
             return;
         }
 
-        for (Contour contour : simplified) {
-            svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
+        List<Contour> classified = measure(
+            "Classifying",
+            () -> ContourClassifier.classify(simplified)
+        );
+
+        for (Contour contour : classified) {
+            svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
         }
 
         svg.save(Paths.get("result.svg"), 0.2);
