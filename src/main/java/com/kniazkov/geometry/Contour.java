@@ -49,7 +49,7 @@ public class Contour {
      * Превращает контур в двусвязный циклический список узлов.
      */
     public Node2 toLinkedList() {
-        return Node2.fromPoints(points);
+        return Node2.fromPoints(normalized().points);
     }
 
     /**

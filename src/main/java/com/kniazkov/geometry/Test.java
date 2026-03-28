@@ -51,11 +51,17 @@ public class Test {
         for (Contour contour : normalized) {
             //svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
             System.out.println("Contour has " + contour.points.size() + " points before simplifying");
-            Node2 begin = contour.toLinkedList();
-            begin = Node2.removeStraight(begin);
-            begin = Node2.removeShortSegments(begin, 1.0);
-            begin = Node2.removeOddAngleType(begin);
-            //begin = Node2.removeStraight(begin);
+            Node2 begin = measure(
+                "Simplifying",
+                () -> {
+                    Node2 first = contour.toLinkedList();
+                    first = Node2.removeStraight(first);
+                    first = Node2.removeShortSegments(first, 1.0);
+                    first = Node2.removeOddAngleType(first);
+                    first = Node2.removeStraight(first);
+                    return first;
+                }
+            );
             System.out.println("Contour has " + Node2.toPoints(begin).size() + " points after simplifying");
             Node2 node = begin;
             do {

@@ -215,17 +215,17 @@ public class Node2 {
         distanceToPrevious = point.distanceTo(previous.point);
         distanceToNext = point.distanceTo(next.point);
 
-        Vector2 toPrev = previous.point.subtract(point);
+        Vector2 toPrevious = previous.point.subtract(point);
         Vector2 toNext = next.point.subtract(point);
 
-        double prevLength = toPrev.length();
+        double prevLength = toPrevious.length();
         double nextLength = toNext.length();
 
-        double cos = toPrev.dot(toNext) / (prevLength * nextLength);
+        double cos = toPrevious.dot(toNext) / (prevLength * nextLength);
         cos = Math.max(-1.0, Math.min(1.0, cos));
         angle = Math.acos(cos);
 
-        double cross = toPrev.cross(toNext);
+        double cross = toPrevious.cross(toNext);
 
         /*
             Для контура, ориентированного против часовой стрелки: внешний угол находится слева,
