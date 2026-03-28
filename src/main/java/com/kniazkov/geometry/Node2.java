@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Узел двусвязного списка, содержащий точку контура и предвычисленную геометрическую информацию о ней.
+ * Узел двусвязного списка, содержащий точку контура
+ * и предвычисленную геометрическую информацию о ней.
  *
- * Класс мутабельный, потому что в дальнейшем узлы могут добавляться, удаляться и переподключаться.
+ * Класс мутабельный, так что в дальнейшем узлы могут добавляться, удаляться и переподключаться.
  */
 public class Node2 {
     /**
@@ -17,76 +18,105 @@ public class Node2 {
 
     public final Point2 point;
 
-    public Node2 prev;
-    public Node2 next;
+    private Node2 previous;
+    private Node2 next;
 
-    public double distanceToPrev;
-    public double distanceToNext;
+    private double distanceToPrevious;
+    private double distanceToNext;
 
     /**
      * Угол в диапазоне [0, pi].
      */
-    public double angle;
+    private double angle;
 
     /**
      * true, если угол внешний.
      */
-    public boolean outer;
+    private boolean outer;
 
     /**
      * true, если угол считается развернутым.
      */
-    public boolean straight;
+    private boolean straight;
 
 
     public Node2(Point2 point) {
         this.point = point;
     }
 
+    public Node2 getPrevious() {
+        return previous;
+    }
+
+    public Node2 getNext() {
+        return next;
+    }
+
+    public double getDistanceToPrevious() {
+        return distanceToPrevious;
+    }
+
+    public double getDistanceToNext() {
+        return distanceToNext;
+    }
+
+    public double getAngle() {
+        return angle;
+    }
+
+    public boolean isOuter() {
+        return outer;
+    }
+
+    public boolean isStraight() {
+        return straight;
+    }
+
     /**
-     * Пересчитывает всю геометрическую информацию узла
-     * по его текущим соседям.
+     * Создает двусвязный циклический список узлов по списку точек
+     * и рассчитывает геометрические параметры каждого узла.
      */
-    public void update() {
-        distanceToPrev = point.distanceTo(prev.point);
-        distanceToNext = point.distanceTo(next.point);
+    public static Node2 fromPoints(List<Point2> points) {
+        if (points.size() < 3) {
+            throw new IllegalArgumentException("Contour must contain at least 3 points");
+        }
 
-        Vector2 toPrev = prev.point.subtract(point);
-        Vector2 toNext = next.point.subtract(point);
+        List<Node2> nodes = new ArrayList<>(points.size());
 
-        double prevLength = toPrev.length();
-        double nextLength = toNext.length();
+        for (Point2 point : points) {
+            nodes.add(new Node2(point));
+        }
 
-        double cos = toPrev.dot(toNext) / (prevLength * nextLength);
-        cos = Math.max(-1.0, Math.min(1.0, cos));
-        angle = Math.acos(cos);
+        int size = nodes.size();
+        for (int i = 0; i < size; i++) {
+            Node2 current = nodes.get(i);
+            current.previous = nodes.get((i - 1 + size) % size);
+            current.next = nodes.get((i + 1) % size);
+        }
 
-        double cross = toPrev.cross(toNext);
+        for (Node2 node : nodes) {
+            node.update();
+        }
 
-        /*
-            Для контура, ориентированного против часовой стрелки: внешний угол находится слева, то есть соответствует
-            отрицательному повороту от вектора на prev к вектору на next.
-         */
-        outer = cross < 0.0;
-
-        straight = Math.PI - angle <= STRAIGHT_ANGLE_EPSILON;
+        return nodes.get(0);
     }
 
     /**
      * Удаляет текущий узел из двусвязного циклического списка.
      *
-     * После удаления соседние узлы соединяются друг с другом и пересчитывают свою геометрическую информацию.
+     * После удаления соседние узлы соединяются друг с другом и пересчитывают
+     * свою геометрическую информацию.
      */
     public void remove() {
-        prev.next = next;
-        next.prev = prev;
+        previous.next = next;
+        next.previous = previous;
 
-        prev.update();
+        previous.update();
         next.update();
 
-        prev = this;
+        previous = this;
         next = this;
-        distanceToPrev = 0;
+        distanceToPrevious = 0;
         distanceToNext = 0;
         angle = 0;
         outer = false;
@@ -156,7 +186,7 @@ public class Node2 {
 
         return removeNodesByCriteria(
             start,
-            node -> node.angle > minAngle && node.distanceToPrev < minDistance
+            node -> node.angle > minAngle && node.distanceToPrevious < minDistance
         );
     }
 
@@ -173,8 +203,35 @@ public class Node2 {
 
         return removeNodesByCriteria(start, node ->
             node.angle > minAngle &&
-                node.prev.outer == node.next.outer &&
-                node.outer != node.prev.outer
+                node.previous.outer == node.next.outer &&
+                node.outer != node.previous.outer
         );
+    }
+
+    /**
+     * Пересчитывает всю геометрическую информацию узла по его текущим соседям.
+     */
+    private void update() {
+        distanceToPrevious = point.distanceTo(previous.point);
+        distanceToNext = point.distanceTo(next.point);
+
+        Vector2 toPrev = previous.point.subtract(point);
+        Vector2 toNext = next.point.subtract(point);
+
+        double prevLength = toPrev.length();
+        double nextLength = toNext.length();
+
+        double cos = toPrev.dot(toNext) / (prevLength * nextLength);
+        cos = Math.max(-1.0, Math.min(1.0, cos));
+        angle = Math.acos(cos);
+
+        double cross = toPrev.cross(toNext);
+
+        /*
+            Для контура, ориентированного против часовой стрелки: внешний угол находится слева,
+            то есть соответствует отрицательному повороту от вектора на prev к вектору на next.
+         */
+        outer = cross < 0.0;
+        straight = Math.PI - angle <= STRAIGHT_ANGLE_EPSILON;
     }
 }

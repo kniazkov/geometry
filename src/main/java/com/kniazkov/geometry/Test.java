@@ -60,12 +60,12 @@ public class Test {
             Node2 node = begin;
             do {
                 svg.addSegments(
-                        Collections.singletonList(new Segment2(node.point, node.prev.point)),
+                        Collections.singletonList(new Segment2(node.point, node.getPrevious().point)),
                         1,
-                        (node.straight ? "green" : (node.outer ? "blue" : "red")),
+                        (node.isStraight() ? "green" : (node.isOuter() ? "blue" : "red")),
                         SvgStrokeStyle.SOLID
                 );
-                node = node.next;
+                node = node.getNext();
             } while (node != begin);
         }
 

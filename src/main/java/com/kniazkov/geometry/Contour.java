@@ -46,6 +46,13 @@ public class Contour {
     }
 
     /**
+     * Превращает контур в двусвязный циклический список узлов.
+     */
+    public Node2 toLinkedList() {
+        return Node2.fromPoints(points);
+    }
+
+    /**
      * Возвращает ориентированную площадь контура.
      *
      * Если обход идет против часовой стрелки, площадь положительная.
@@ -108,30 +115,5 @@ public class Contour {
         }
 
         return result;
-    }
-
-    /**
-     * Создает двусвязный циклический список узлов по контуру
-     * и пересчитывает геометрические параметры каждого узла.
-     */
-    public Node2 toLinkedList() {
-        List<Node2> nodes = new ArrayList<>(points.size());
-
-        for (Point2 point : normalized().points) {
-            nodes.add(new Node2(point));
-        }
-
-        int size = nodes.size();
-        for (int i = 0; i < size; i++) {
-            Node2 current = nodes.get(i);
-            current.prev = nodes.get((i - 1 + size) % size);
-            current.next = nodes.get((i + 1) % size);
-        }
-
-        for (Node2 node : nodes) {
-            node.update();
-        }
-
-        return nodes.get(0);
     }
 }
