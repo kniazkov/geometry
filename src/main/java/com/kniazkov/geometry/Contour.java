@@ -23,6 +23,7 @@ public class Contour {
 
     public final Type type;
     public final List<Point2> points;
+    private java.util.Map<Point2, Integer> pointIndices;
     private List<Segment2> segments;
     private Double signedArea;
 
@@ -45,9 +46,28 @@ public class Contour {
      */
     public Contour withType(Type type) {
         Contour contour = new Contour(type, points);
+        contour.pointIndices = pointIndices;
         contour.signedArea = signedArea;
         contour.segments = segments;
         return contour;
+    }
+
+    /**
+     * Возвращает индекс точки в контуре.
+     *
+     * Если точка в контуре не найдена, возвращается -1.
+     */
+    public int getPointIndex(Point2 point) {
+        if (pointIndices == null) {
+            pointIndices = new java.util.HashMap<>(points.size());
+
+            for (int i = 0; i < points.size(); i++) {
+                pointIndices.put(points.get(i), i);
+            }
+        }
+
+        Integer index = pointIndices.get(point);
+        return index != null ? index : -1;
     }
 
     /**
