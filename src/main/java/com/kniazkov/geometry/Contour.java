@@ -16,6 +16,7 @@ import java.util.List;
  */
 public class Contour {
     public final List<Point2> points;
+    private List<Segment2> segments;
     private Double signedArea;
 
 
@@ -34,15 +35,16 @@ public class Contour {
      * последнюю вершину с первой.
      */
     public List<Segment2> toSegments() {
-        List<Segment2> result = new ArrayList<>(points.size());
-
-        for (int i = 0; i < points.size(); i++) {
-            Point2 a = points.get(i);
-            Point2 b = points.get((i + 1) % points.size());
-            result.add(new Segment2(a, b));
+        if (segments == null) {
+            segments = new ArrayList<>(points.size());
+            for (int i = 0; i < points.size(); i++) {
+                Point2 a = points.get(i);
+                Point2 b = points.get((i + 1) % points.size());
+                segments.add(new Segment2(a, b));
+            }
         }
 
-        return result;
+        return segments;
     }
 
     /**
@@ -50,6 +52,13 @@ public class Contour {
      */
     public Node2 toLinkedList() {
         return Node2.fromPoints(normalized().points);
+    }
+
+    /**
+     * Превращает двусвязный циклический список узлов в контур.
+     */
+    public static Contour fromLinkedList(Node2 node) {
+        return new Contour(Node2.toPoints(node));
     }
 
     /**

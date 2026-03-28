@@ -5,18 +5,17 @@ import java.util.*;
 /**
  * Пространственный индекс сегментов по грубым ячейкам.
  *
- * Каждый сегмент добавляется в карту дважды:
- * по ячейке первой точки и по ячейке второй точки.
+ * Каждый сегмент добавляется в карту дважды: по ячейке первой точки и по ячейке второй точки.
  *
  * Поиск работает так:
  * - сначала ищем сегменты в ячейке самой точки
  * - если там ничего нет, ищем в 8 соседних ячейках
  */
-public class SegmentMap {
+public class SegmentEndpointMap {
     private final Map<Cell, Set<Segment2>> map = new HashMap<>();
 
 
-    public SegmentMap(List<Segment2> segments) {
+    public SegmentEndpointMap(List<Segment2> segments) {
         for (Segment2 segment : segments) {
             add(segment.a.toCell(), segment);
             add(segment.b.toCell(), segment);

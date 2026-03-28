@@ -2,6 +2,7 @@ package com.kniazkov.geometry;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -13,7 +14,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\wd.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -27,7 +28,7 @@ public class Test {
 
         List<Segment2> segments = measure(
             "Slicing",
-            () -> model.sliceAt(1500)
+            () -> model.sliceAt(2500)
         );
 
         System.out.println("Obtain " + segments.size() + " segments after slicing");
@@ -48,31 +49,32 @@ public class Test {
                 () -> Contour.normalizeAll(contours)
         );
 
-        for (Contour contour : normalized) {
-            //svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
-            System.out.println("Contour has " + contour.points.size() + " points before simplifying");
-            Node2 begin = measure(
+        List<Contour> simplified = measure(
                 "Simplifying",
                 () -> {
-                    Node2 first = contour.toLinkedList();
-                    first = Node2.removeStraight(first);
-                    first = Node2.removeShortSegments(first, 1.0);
-                    first = Node2.removeOddAngleType(first);
-                    first = Node2.removeStraight(first);
-                    return first;
+                    List<Contour> result = new ArrayList<>(normalized.size());
+                    for(Contour contour : normalized) {
+                        Node2 node = contour.toLinkedList();
+                        node = Node2.removeStraight(node);
+                        node = Node2.removeShortSegments(node, 1.0);
+                        node = Node2.removeOddAngleType(node);
+                        node = Node2.removeStraight(node);
+                        result.add(Contour.fromLinkedList(node));
+                    }
+                    return result;
                 }
-            );
-            System.out.println("Contour has " + Node2.toPoints(begin).size() + " points after simplifying");
-            Node2 node = begin;
-            do {
-                svg.addSegments(
-                        Collections.singletonList(new Segment2(node.point, node.getPrevious().point)),
-                        1,
-                        (node.isStraight() ? "green" : (node.isOuter() ? "blue" : "red")),
-                        SvgStrokeStyle.SOLID
-                );
-                node = node.getNext();
-            } while (node != begin);
+        );
+        Boolean hasIntersections = measure(
+            "Checking for self-intersections",
+            () -> ContourIntersectionFinder.hasAnyIntersections(simplified)
+        );
+        if (hasIntersections) {
+            System.err.println("Has intersections!");
+            return;
+        }
+
+        for (Contour contour : simplified) {
+            svg.addSegments(contour.toSegments(), 1, "blue", SvgStrokeStyle.SOLID);
         }
 
         svg.save(Paths.get("result.svg"), 0.2);

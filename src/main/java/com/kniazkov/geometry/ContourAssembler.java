@@ -16,13 +16,13 @@ import java.util.Set;
  * отбрасываются.
  */
 public class ContourAssembler {
-    private final SegmentMap segmentMap;
+    private final SegmentEndpointMap segmentMap;
     private final Set<Segment2> unusedSegments;
     private final double epsilon;
 
 
     public ContourAssembler(List<Segment2> segments, double epsilon) {
-        this.segmentMap = new SegmentMap(segments);
+        this.segmentMap = new SegmentEndpointMap(segments);
         this.unusedSegments = new HashSet<>(segments);
         this.epsilon = epsilon;
     }
