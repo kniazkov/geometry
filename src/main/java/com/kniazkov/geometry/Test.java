@@ -79,6 +79,8 @@ public class Test {
         );
 
         for (Contour contour : classified) {
+            ContourOffsetter offsetter = new ContourOffsetter(contour);
+            List<OffsetContour> offset = offsetter.offset(15.0);
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
         }
 

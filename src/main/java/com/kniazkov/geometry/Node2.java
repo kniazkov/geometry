@@ -1,6 +1,7 @@
 package com.kniazkov.geometry;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -135,7 +136,7 @@ public class Node2 {
             node = node.next;
         } while (node != start);
 
-        return list;
+        return Collections.unmodifiableList(list);
     }
 
     @FunctionalInterface

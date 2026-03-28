@@ -104,6 +104,13 @@ public class Contour {
     }
 
     /**
+     * Превращает двусвязный циклический список узлов в контур с указанием типа.
+     */
+    public static Contour fromLinkedList(Type type, Node2 node) {
+        return new Contour(type, Node2.toPoints(node));
+    }
+
+    /**
      * Возвращает ориентированную площадь контура.
      *
      * Если обход идет против часовой стрелки, площадь положительная.
