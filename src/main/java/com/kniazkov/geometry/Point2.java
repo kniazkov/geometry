@@ -79,7 +79,7 @@ public class Point2 implements SegmentIntersection {
      * Преобразует точку в ячейку грубой пространственной сетки.
      * Обе координаты округляются вниз.
      */
-    public Cell toCell() {
-        return new Cell((int) Math.floor(x), (int) Math.floor(y));
+    public Cell toCell(double accuracy) {
+        return new Cell((int) Math.floor(x * accuracy), (int) Math.floor(y * accuracy));
     }
 }

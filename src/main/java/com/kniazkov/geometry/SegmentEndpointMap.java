@@ -12,13 +12,17 @@ import java.util.*;
  * - если там ничего нет, ищем в 8 соседних ячейках
  */
 public class SegmentEndpointMap {
+    /**
+     * Округляем точки до целых
+     */
+    public static final double ACCURACY = 1.0;
     private final Map<Cell, Set<Segment2>> map = new HashMap<>();
 
 
     public SegmentEndpointMap(List<Segment2> segments) {
         for (Segment2 segment : segments) {
-            add(segment.a.toCell(), segment);
-            add(segment.b.toCell(), segment);
+            add(segment.a.toCell(ACCURACY), segment);
+            add(segment.b.toCell(ACCURACY), segment);
         }
     }
 
@@ -29,7 +33,7 @@ public class SegmentEndpointMap {
      * Если в этой ячейке ничего нет, тогда ищутся сегмент в соседних ячейках.
      */
     public Set<Segment2> find(Point2 point) {
-        Cell cell = point.toCell();
+        Cell cell = point.toCell(ACCURACY);
 
         Set<Segment2> own = map.get(cell);
         if (own != null && !own.isEmpty()) {

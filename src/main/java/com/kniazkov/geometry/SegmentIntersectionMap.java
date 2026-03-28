@@ -27,6 +27,10 @@ import java.util.TreeSet;
  * число точных геометрических проверок.
  */
 public class SegmentIntersectionMap {
+    /**
+     * Округляем точки до десятков, так у нас будет быстрее строиться карта
+     */
+    public static final double ACCURACY = 0.1;
     private final Map<Integer, Set<Integer>> xMap = new HashMap<>();
     private final Map<Integer, Set<Integer>> yMap = new HashMap<>();
 
@@ -42,8 +46,8 @@ public class SegmentIntersectionMap {
      * пересекаться с указанным сегментом.
      */
     public Set<Integer> find(Segment2 segment) {
-        Cell a = segment.a.toCell();
-        Cell b = segment.b.toCell();
+        Cell a = segment.a.toCell(ACCURACY);
+        Cell b = segment.b.toCell(ACCURACY);
 
         int minX = Math.min(a.x, b.x);
         int maxX = Math.max(a.x, b.x);
@@ -86,8 +90,8 @@ public class SegmentIntersectionMap {
      * чтобы захватывать близкие случаи около границ.
      */
     private void add(int index, Segment2 segment) {
-        Cell a = segment.a.toCell();
-        Cell b = segment.b.toCell();
+        Cell a = segment.a.toCell(ACCURACY);
+        Cell b = segment.b.toCell(ACCURACY);
 
         int minX = Math.min(a.x, b.x);
         int maxX = Math.max(a.x, b.x);
