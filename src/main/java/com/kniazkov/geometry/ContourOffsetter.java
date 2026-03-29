@@ -169,7 +169,6 @@ public class ContourOffsetter {
                     arcEnd,
                     center,
                     absDistance,
-                    contour.type == Contour.Type.INNER,
                     offsetPoints
                 );
             }
@@ -190,9 +189,7 @@ public class ContourOffsetter {
      * Предполагается, что точки a и b лежат на окружности радиуса radius
      * с центром в c.
      *
-     * Направление дуги задается параметром clockwise:
-     * - true  -> по часовой стрелке
-     * - false -> против часовой стрелки
+     * Всегда выбирается более короткая из двух возможных дуг.
      *
      * Начальная точка a в список не добавляется, потому что обычно она уже
      * была добавлена ранее. Конечная точка b добавляется всегда.
@@ -205,27 +202,37 @@ public class ContourOffsetter {
         Point2 b,
         Point2 c,
         double radius,
-        boolean clockwise,
         List<Point2> points
     ) {
+        if (radius <= 0.0) {
+            throw new IllegalArgumentException("Radius must be positive");
+        }
+
         Vector2 va = a.subtract(c);
         Vector2 vb = b.subtract(c);
 
         double startAngle = Math.atan2(va.y, va.x);
         double endAngle = Math.atan2(vb.y, vb.x);
 
-        double sweepAngle = endAngle - startAngle;
+        /*
+            Считаем обе возможные дуги:
+            - против часовой стрелки
+            - по часовой стрелке
 
-        if (clockwise) {
-            while (sweepAngle >= 0.0) {
-                sweepAngle -= 2.0 * Math.PI;
-            }
-            sweepAngle = -sweepAngle;
-        } else {
-            while (sweepAngle <= 0.0) {
-                sweepAngle += 2.0 * Math.PI;
-            }
+            Затем выбираем более короткую.
+         */
+        double ccwSweep = endAngle - startAngle;
+        while (ccwSweep <= 0.0) {
+            ccwSweep += 2.0 * Math.PI;
         }
+
+        double cwSweep = startAngle - endAngle;
+        while (cwSweep <= 0.0) {
+            cwSweep += 2.0 * Math.PI;
+        }
+
+        boolean clockwise = cwSweep < ccwSweep;
+        double sweepAngle = clockwise ? cwSweep : ccwSweep;
 
         /*
             Максимальный угловой шаг выбираем из ограничения на длину хорды:
@@ -240,6 +247,9 @@ public class ContourOffsetter {
             maxStepAngle = 2.0 * Math.asin(maxArcSegmentLength / (2.0 * radius));
         }
 
+        /*
+            На всякий случай страхуемся от численных странностей.
+         */
         if (maxStepAngle <= 0.0) {
             maxStepAngle = sweepAngle;
         }
