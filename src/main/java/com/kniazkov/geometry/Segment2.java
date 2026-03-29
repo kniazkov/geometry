@@ -218,4 +218,33 @@ public class Segment2 implements SegmentIntersection {
 
         return Optional.of(this.pointAt(t));
     }
+
+    /**
+     * Возвращает параллельный отрезок, смещенный на указанное расстояние.
+     *
+     * Положительное смещение означает сдвиг вправо относительно направления
+     * от точки a к точке b.
+     * Отрицательное смещение означает сдвиг влево.
+     *
+     * Для вырожденного отрезка смещение не определено.
+     */
+    public Segment2 offset(double distance) {
+        Vector2 ab = toVector();
+        double length = ab.length();
+
+        if (length <= Point2.EPSILON) {
+            throw new IllegalStateException("Cannot offset zero-length segment");
+        }
+
+        /*
+            Правая единичная нормаль к вектору (x, y) равна (y, -x).
+         */
+        Vector2 normal = new Vector2(ab.y / length, -ab.x / length);
+        Vector2 shift = normal.multiply(distance);
+
+        return new Segment2(
+            a.add(shift),
+            b.add(shift)
+        );
+    }
 }

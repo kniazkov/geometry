@@ -79,9 +79,12 @@ public class Test {
         );
 
         for (Contour contour : classified) {
-            ContourOffsetter offsetter = new ContourOffsetter(contour);
-            List<OffsetContour> offset = offsetter.offset(15.0);
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
+            ContourOffsetter offsetter = new ContourOffsetter(contour);
+            List<OffsetContour> offsetList = offsetter.offset(15.0);
+            for (OffsetContour offset : offsetList) {
+                svg.addSegments(offset.contour.toSegments(), 1, offset.contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.DASHED);
+            }
         }
 
         svg.save(Paths.get("result.svg"), 0.2);
