@@ -169,6 +169,7 @@ public class ContourOffsetter {
                     arcEnd,
                     center,
                     absDistance,
+                    contour.type == Contour.Type.INNER,
                     offsetPoints
                 );
             }
@@ -189,8 +190,9 @@ public class ContourOffsetter {
      * Предполагается, что точки a и b лежат на окружности радиуса radius
      * с центром в c.
      *
-     * Дуга строится против часовой стрелки от луча c->a к лучу c->b.
-     * Если нужен почти полный оборот, будет добавлено соответствующее число точек.
+     * Направление дуги задается параметром clockwise:
+     * - true  -> по часовой стрелке
+     * - false -> против часовой стрелки
      *
      * Начальная точка a в список не добавляется, потому что обычно она уже
      * была добавлена ранее. Конечная точка b добавляется всегда.
@@ -203,6 +205,7 @@ public class ContourOffsetter {
         Point2 b,
         Point2 c,
         double radius,
+        boolean clockwise,
         List<Point2> points
     ) {
         Vector2 va = a.subtract(c);
@@ -211,13 +214,17 @@ public class ContourOffsetter {
         double startAngle = Math.atan2(va.y, va.x);
         double endAngle = Math.atan2(vb.y, vb.x);
 
-        /*
-            Нормализуем угол так, чтобы идти от startAngle к endAngle
-            именно против часовой стрелки.
-         */
         double sweepAngle = endAngle - startAngle;
-        while (sweepAngle <= 0.0) {
-            sweepAngle += 2.0 * Math.PI;
+
+        if (clockwise) {
+            while (sweepAngle >= 0.0) {
+                sweepAngle -= 2.0 * Math.PI;
+            }
+            sweepAngle = -sweepAngle;
+        } else {
+            while (sweepAngle <= 0.0) {
+                sweepAngle += 2.0 * Math.PI;
+            }
         }
 
         /*
@@ -233,9 +240,6 @@ public class ContourOffsetter {
             maxStepAngle = 2.0 * Math.asin(maxArcSegmentLength / (2.0 * radius));
         }
 
-        /*
-            На всякий случай страхуемся от численных странностей.
-         */
         if (maxStepAngle <= 0.0) {
             maxStepAngle = sweepAngle;
         }
@@ -244,7 +248,9 @@ public class ContourOffsetter {
         double stepAngle = sweepAngle / segmentCount;
 
         for (int i = 1; i <= segmentCount; i++) {
-            double angle = startAngle + stepAngle * i;
+            double angle = clockwise
+                ? startAngle - stepAngle * i
+                : startAngle + stepAngle * i;
 
             points.add(new Point2(
                 c.x + radius * Math.cos(angle),
