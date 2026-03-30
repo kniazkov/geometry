@@ -1,9 +1,6 @@
 package com.kniazkov.geometry;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Заготовка для смещения контура внутрь или наружу.
@@ -66,11 +63,12 @@ public class ContourOffsetter {
             Вырожденный случай.
          */
         if (distance == 0.0) {
-            Map<Integer, Integer> map = new HashMap<>();
-            for (int i = 0; i < contour.points.size(); i++) {
-                map.put(i, i);
+            OffsetContour.Builder builder = new OffsetContour.Builder(contour);
+            builder.setOffsetContour(contour);
+            for (Point2 point : contour.points) {
+                builder.addCorrespondingPoints(point, point);
             }
-            return List.of(new OffsetContour(contour, map, map));
+            return List.of(builder.build());
         }
 
         /*
@@ -137,12 +135,14 @@ public class ContourOffsetter {
 
             Это дает вершину, соответствующую первой точке контура.
          */
+        OffsetContour.Builder builder = new OffsetContour.Builder(contour);
         List<Point2> offsetPoints = new ArrayList<>(offsetSegments.size());
 
         int size = offsetSegments.size();
         for (int i = 0; i < size; i++) {
             int previousIndex = (i - 1 + size) % size;
 
+            Segment2 previousOriginalSegment = simplifiedSegments.get(previousIndex);
             Segment2 previousOffsetSegment = offsetSegments.get(previousIndex);
             Segment2 currentOffsetSegment = offsetSegments.get(i);
 
@@ -153,6 +153,7 @@ public class ContourOffsetter {
 
                 if (value instanceof Point2 point) {
                     offsetPoints.add(point);
+                    builder.addCorrespondingPoints(previousOriginalSegment.b, point);
                 } else if (value instanceof Segment2) {
                     throw new IllegalStateException("Unexpected overlapping offset segments");
                 } else {
@@ -161,7 +162,6 @@ public class ContourOffsetter {
             } else {
                 Point2 arcStart = previousOffsetSegment.b;
                 Point2 arcEnd = currentOffsetSegment.a;
-                Segment2 previousOriginalSegment = simplifiedSegments.get(previousIndex);
                 Point2 center = previousOriginalSegment.b;
 
                 addArcPoints(
@@ -169,18 +169,14 @@ public class ContourOffsetter {
                     arcEnd,
                     center,
                     absDistance,
-                    offsetPoints
+                    offsetPoints,
+                    builder
                 );
             }
         }
 
-        return List.of(
-            new OffsetContour(
-                new Contour(offsetPoints).withType(contour.type),
-                Map.of(),
-                Map.of()
-            )
-        );
+        builder.setOffsetContour(new Contour(offsetPoints).withType(contour.type));
+        return List.of(builder.build());
     }
 
     /**
@@ -202,7 +198,8 @@ public class ContourOffsetter {
         Point2 b,
         Point2 c,
         double radius,
-        List<Point2> points
+        List<Point2> points,
+        OffsetContour.Builder builder
     ) {
         if (radius <= 0.0) {
             throw new IllegalArgumentException("Radius must be positive");
@@ -262,10 +259,12 @@ public class ContourOffsetter {
                 ? startAngle - stepAngle * i
                 : startAngle + stepAngle * i;
 
-            points.add(new Point2(
-                c.x + radius * Math.cos(angle),
-                c.y + radius * Math.sin(angle)
-            ));
+            Point2 point = new Point2(
+                    c.x + radius * Math.cos(angle),
+                    c.y + radius * Math.sin(angle)
+            );
+            points.add(point);
+            builder.addCorrespondingPoints(c, point);
         }
     }
 }

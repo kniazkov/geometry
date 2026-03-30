@@ -101,16 +101,18 @@ public class SvgBuilder {
         try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             writer.write(String.format(
-                Locale.US,
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %.6f %.6f\">\n",
-                svgWidth,
-                svgHeight
+                    Locale.US,
+                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.6f\" height=\"%.6f\" viewBox=\"0 0 %.6f %.6f\">\n",
+                    svgWidth,
+                    svgHeight,
+                    svgWidth,
+                    svgHeight
             ));
 
             writer.write("  <g fill=\"none\">\n");
 
             for (Group group : groups) {
-                writeGroup(writer, group, scale, minX, minY, maxY);
+                writeGroup(writer, group, scale, minX, maxY);
             }
 
             writer.write("  </g>\n");
@@ -123,14 +125,13 @@ public class SvgBuilder {
         Group group,
         double scale,
         double minX,
-        double minY,
         double maxY
     ) throws IOException {
         writer.write(String.format(
             Locale.US,
             "    <g stroke=\"%s\" stroke-width=\"%.6f\"",
             escapeXml(group.color),
-            group.thickness / scale
+            group.thickness
         ));
 
         if (!"none".equals(group.style.dashArray)) {

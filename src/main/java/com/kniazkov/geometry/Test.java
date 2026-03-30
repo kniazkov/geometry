@@ -13,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -81,9 +81,22 @@ public class Test {
         for (Contour contour : classified) {
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
             ContourOffsetter offsetter = new ContourOffsetter(contour);
-            List<OffsetContour> offsetList = offsetter.offset(-15.0);
+            List<OffsetContour> offsetList = measure(
+                    "Offset",
+                    () -> offsetter.offset(-15.0)
+            );
             for (OffsetContour offset : offsetList) {
-                svg.addSegments(offset.contour.toSegments(), 1, offset.contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.DASHED);
+                svg.addSegments(offset.offset.toSegments(), 1, offset.offset.type == Contour.Type.INNER ? "orange" : "cyan", SvgStrokeStyle.SOLID);
+                for (Integer originalIndex : offset.originalToOffset.keySet()) {
+                    for (Integer offsetIndex : offset.originalToOffset.get(originalIndex)) {
+                        svg.addSegments(
+                                List.of(new Segment2(offset.original.points.get(originalIndex), offset.offset.points.get(offsetIndex))),
+                                1,
+                                "gray",
+                                SvgStrokeStyle.SOLID
+                        );
+                    }
+                }
             }
         }
 
