@@ -139,26 +139,21 @@ public class Node2 {
         return Collections.unmodifiableList(list);
     }
 
-    @FunctionalInterface
-    public interface RemoveCriteria {
-        boolean shouldRemove(Node2 node);
-    }
-
     /**
      * Удаляет из двусвязного циклического списка все узлы,
      * удовлетворяющие заданному критерию.
      *
      * Возвращает ссылку на любой оставшийся узел списка.
      */
-    public static Node2 removeNodesByCriteria(Node2 start, RemoveCriteria criteria) {
-        while (criteria.shouldRemove(start)) {
+    public static Node2 removeNodesByCriteria(Node2 start, NodeSelectionCriteria criteria) {
+        while (criteria.test(start)) {
             start = start.next;
         }
 
         Node2 node = start;
         do {
             Node2 next = node.next;
-            if (criteria.shouldRemove(node)) {
+            if (criteria.test(node)) {
                 node.remove();
             }
             node = next;
