@@ -55,80 +55,117 @@ public class Node2ChainReducer {
      * возвращается одна общая цепочка.
      */
     public List<Chain> findChains(Node2 start) {
-        List<Node2> nodes = Node2.toNodes(start);
-        int size = nodes.size();
-
-        if (size == 0) {
-            return Collections.emptyList();
-        }
-
-        List<Boolean> selected = new ArrayList<>(size);
-        boolean hasSelected = false;
-        boolean hasUnselected = false;
-
-        for (Node2 node : nodes) {
-            boolean isSelected = isChainNode(node);
-            selected.add(isSelected);
-            hasSelected |= isSelected;
-            hasUnselected |= !isSelected;
-        }
-
-        if (!hasSelected) {
-            return Collections.emptyList();
+        /*
+            Вырожденный случай: кольцо из одного узла
+         */
+        if (start.getNext() == start) {
+            return List.of();
         }
 
         /*
-            Если выбран весь контур, это одна большая циклическая цепочка.
-         */
-        if (!hasUnselected) {
-            return Collections.singletonList(new Chain(nodes));
-        }
+            Ищем узел-разделитель, после которого безопасно начинать обход.
+            Разделитель - это узел, который сам не подходит под дополнительный критерий
+            или не соединен со следующим узлом коротким сегментом.
 
-        /*
-            Чтобы не заниматься последующим склеиванием первой и последней цепочки,
-            начинаем обход сразу после любого узла, который не входит в цепочку.
-            Тогда каждая найденная группа выбранных узлов автоматически будет максимальной.
+            Если такого узла нет, значит:
+            - все узлы проходят дополнительный критерий;
+            - каждый переход к следующему узлу короче distance.
+            То есть, все кольцо является одной плотной цепочкой.
          */
-        int anchorIndex = -1;
-        for (int i = 0; i < size; i++) {
-            if (!selected.get(i)) {
-                anchorIndex = i;
+        Node2 node = start;
+        Node2 anchor = null;
+        do {
+            if (!criteria.test(node) || node.getDistanceToNext() >= distance) {
+                anchor = node;
                 break;
+            }
+
+            node = node.getNext();
+        } while (node != start);
+
+        if (anchor == null) {
+            return List.of(new Chain(Node2.toNodes(start)));
+        }
+
+
+        /*
+            Ищем стартовый узел, такой, с которого можно начать цепочку.
+            Стартовый узел:
+            - проходит дополнительный критерий;
+            - переход до следующего узла < distance;
+            - переход до предыдущего узла >= distance или предыдущий узел не проходит дополнительный критерий.
+            Если такого узла нет, то значит, ни один узел не подходит и нельзя собрать
+            ни одной цепочки.
+         */
+        Node2 first = anchor.getNext();
+        node = first;
+        while(true) {
+            if (criteria.test(node) &&
+                (node.getDistanceToPrevious() >= distance || !criteria.test(node.getPrevious())) &&
+                node.getDistanceToNext() < distance)
+            {
+                first = node;
+                break;
+            }
+            node = node.getNext();
+            if (node == first) {
+                return List.of();
             }
         }
 
         List<Chain> chains = new ArrayList<>();
-        List<Node2> currentChain = null;
 
-        for (int step = 1; step <= size; step++) {
-            int index = (anchorIndex + step) % size;
-            Node2 node = nodes.get(index);
+        while(true) {
+            List<Node2> nodes = new ArrayList<>();
 
-            if (selected.get(index)) {
-                if (currentChain == null) {
-                    currentChain = new ArrayList<>();
+            /*
+                Здесь node указывает на начало цепочки. Кладем этот узел в цепочку.
+             */
+            nodes.add(node);
+            node = node.getNext();
+
+            /*
+                Пока у текущего узла расстояние до предыдущего узла < distance и узел
+                проходит дополнительный критерий, этот узел добавляется в цепочку.
+             */
+            while(criteria.test(node) && node.getDistanceToPrevious() < distance) {
+                nodes.add(node);
+                node = node.getNext();
+            }
+
+            /*
+                Цепочка собрана. Если в ней больше 1 узла, добавляем ее в список.
+             */
+            if (nodes.size() > 1) {
+                chains.add(new Chain(nodes));
+            }
+
+            /*
+                Сейчас node указывает на неподходящий узел.
+                Находим следующий стартовый узел. Если такой не нашли (вернулись в first),
+                конец алгоритма.
+             */
+            while(true) {
+                if (node == first) {
+                    return Collections.unmodifiableList(chains);
                 }
-                currentChain.add(node);
-            } else if (currentChain != null) {
-                chains.add(new Chain(currentChain));
-                currentChain = null;
+                if (criteria.test(node) &&
+                    (node.getDistanceToPrevious() >= distance || !criteria.test(node.getPrevious())) &&
+                    node.getDistanceToNext() < distance)
+                {
+                    break;
+                }
+                node = node.getNext();
             }
         }
-
-        return Collections.unmodifiableList(chains);
-    }
-
-    /**
-     * Возвращает true, если узел должен войти в плотную цепочку.
-     */
-    private boolean isChainNode(Node2 node) {
-        boolean shortNeighborSegment = node.getDistanceToPrevious() < distance || node.getDistanceToNext() < distance;
-        return shortNeighborSegment && criteria.test(node);
-    }
+   }
 
     /**
      * Непрерывная цепочка подряд идущих узлов кольца,
      * отобранных для дальнейшей обработки.
+     *
+     * Цепочка всегда содержит как минимум два узла,
+     * потому что одиночная точка не образует участок ломаной.
      */
     public static class Chain {
         public final List<Node2> nodes;
@@ -137,11 +174,11 @@ public class Node2ChainReducer {
         public final double totalLength;
 
         public Chain(List<Node2> nodes) {
-            if (nodes.isEmpty()) {
-                throw new IllegalArgumentException("Chain must contain at least one node");
+            if (nodes.size() < 2) {
+                throw new IllegalArgumentException("Chain must contain at least 2 nodes");
             }
 
-            this.nodes = Collections.unmodifiableList(new ArrayList<>(nodes));
+            this.nodes = List.copyOf(nodes);
 
             List<Point2> points = new ArrayList<>(nodes.size());
             List<Double> cumulativeLengths = new ArrayList<>(nodes.size());
@@ -149,17 +186,19 @@ public class Node2ChainReducer {
             double length = 0.0;
             cumulativeLengths.add(length);
 
-            Point2 previousPoint = null;
-            for (Node2 node : nodes) {
-                Point2 point = node.point;
-                points.add(point);
+            for (int i = 0; i < nodes.size(); i++) {
+                Node2 node = nodes.get(i);
+                points.add(node.point);
 
-                if (previousPoint != null) {
-                    length += previousPoint.distanceTo(point);
+                if (i > 0) {
+                    /*
+                        Узлы в цепочке идут подряд по кольцу,
+                        поэтому расстояние от текущего узла до предыдущего
+                        уже заранее посчитано в самом Node2.
+                     */
+                    length += node.getDistanceToPrevious();
                     cumulativeLengths.add(length);
                 }
-
-                previousPoint = point;
             }
 
             this.points = Collections.unmodifiableList(points);
@@ -179,18 +218,9 @@ public class Node2ChainReducer {
             return nodes.size();
         }
 
-        public List<Point2> getPoints() {
-            return points;
-        }
-
-        public List<Double> getCumulativeLengths() {
-            return cumulativeLengths;
-        }
-
-        public double getTotalLength() {
-            return totalLength;
-        }
-
+        /**
+         * Возвращает точку на полилинии цепочки на заданном расстоянии от ее начала.
+         */
         public Point2 pointAtLength(double distanceFromStart) {
             if (distanceFromStart <= 0.0) {
                 return points.get(0);

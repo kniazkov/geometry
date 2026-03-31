@@ -72,14 +72,14 @@ public class Node2ChainReducerFindChainsTest {
         assertEquals(2, chains.size());
         assertChain(
             chains.get(0),
-            0.0, 0.0,
-            0.3, 0.0,
-            0.6, 0.0
+            5.0, 0.0,
+            5.3, 0.0
         );
         assertChain(
             chains.get(1),
-            5.0, 0.0,
-            5.3, 0.0
+            0.0, 0.0,
+            0.3, 0.0,
+            0.6, 0.0
         );
     }
 
