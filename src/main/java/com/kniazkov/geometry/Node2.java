@@ -125,6 +125,21 @@ public class Node2 {
     }
 
     /**
+     * Собирает узлы кольца в список в порядке обхода.
+     */
+    public static List<Node2> toNodes(Node2 start) {
+        List<Node2> list = new ArrayList<>();
+        Node2 node = start;
+
+        do {
+            list.add(node);
+            node = node.next;
+        } while (node != start);
+
+        return Collections.unmodifiableList(list);
+    }
+
+    /**
      * Собирает точки кольца в список в порядке обхода.
      */
     public static List<Point2> toPoints(Node2 start) {
