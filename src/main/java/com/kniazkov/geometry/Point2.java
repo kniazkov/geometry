@@ -82,4 +82,9 @@ public class Point2 implements SegmentIntersection {
     public Cell toCell(double accuracy) {
         return new Cell((int) Math.floor(x * accuracy), (int) Math.floor(y * accuracy));
     }
+
+    @Override
+    public String toString() {
+        return "[" + x + ", " + y + "]";
+    }
 }

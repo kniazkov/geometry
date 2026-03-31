@@ -54,7 +54,7 @@ public class Node2ChainReducer {
      * не считаются разными: если подходящие узлы идут через границу обхода,
      * возвращается одна общая цепочка.
      */
-    public List<Chain> findChains(Node2 start) {
+    List<Chain> findChains(Node2 start) {
         /*
             Вырожденный случай: кольцо из одного узла
          */
@@ -161,19 +161,117 @@ public class Node2ChainReducer {
    }
 
     /**
+     * Строит новый список точек для одной плотной цепочки.
+     *
+     * Правила:
+     * - если длина всей цепочки меньше distance, цепочка схлопывается в одну точку,
+     *   лежащую посередине полилинии по накопленной длине;
+     * - иначе первая и последняя точки сохраняются,
+     *   а внутренние точки расставляются по полилинии максимально плотно,
+     *   но так, чтобы евклидово расстояние между соседними новыми точками
+     *   было не меньше distance.
+     */
+    List<Point2> buildReplacementPoints(Chain chain) {
+        /*
+            Если вся цепочка меньше distance, оставляем одну точку.
+         */
+        if (chain.totalLength < distance) {
+            return List.of(
+                chain.pointAtLength(chain.totalLength / 2.0)
+            );
+        }
+
+        /*
+            Считаем приблизительное количество отрезков, размер которых не меньше distance.
+         */
+        int segmentCount = (int) Math.floor(chain.totalLength / distance);
+        segmentCount = Math.max(1, segmentCount);
+
+        while (true) {
+            /*
+                Строим новые точки по количеству отрезков, эти точки будут равномерно
+                распределены по старой траектории.
+             */
+            List<Point2> points = buildPointsForSegmentCount(chain, segmentCount);
+
+            /*
+                Проверяем, действительно ли полученное расстояние между новыми точками не
+                превышает distance.
+             */
+            if (hasMinEuclideanSpacing(points)) {
+                return points;
+            }
+
+            /*
+                Если превышает - уменьшаем количество точек и пересчитываем.
+             */
+            segmentCount--;
+            if (segmentCount <= 1) {
+                /*
+                    Если уменьшать некуда - оставляем две точки в начале и в конце.
+                 */
+                return List.of(
+                    chain.points.get(0),
+                    chain.points.get(chain.points.size() - 1)
+                );
+            }
+        }
+    }
+
+    /**
+     * Строит точки цепочки для заданного числа интервалов.
+     *
+     * Если intervalCount == 1, остаются только первая и последняя точки.
+     * Иначе внутренние точки ставятся равномерно по длине полилинии.
+     */
+    private static List<Point2> buildPointsForSegmentCount(Chain chain, int intervalCount) {
+        if (intervalCount <= 1) {
+            return List.of(
+                chain.points.get(0),
+                chain.points.get(chain.points.size() - 1)
+            );
+        }
+
+        List<Point2> result = new ArrayList<>(intervalCount + 1);
+        double step = chain.totalLength / intervalCount;
+
+        result.add(chain.points.get(0));
+        for (int i = 1; i < intervalCount; i++) {
+            result.add(chain.pointAtLength(step * i));
+        }
+        result.add(chain.points.get(chain.points.size() - 1));
+
+        return Collections.unmodifiableList(result);
+    }
+
+    /**
+     * Проверяет, что евклидово расстояние между соседними точками
+     * не меньше distance.
+     */
+    private boolean hasMinEuclideanSpacing(List<Point2> points) {
+        for (int i = 1; i < points.size(); i++) {
+            if (points.get(i - 1).distanceTo(points.get(i)) < distance) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Непрерывная цепочка подряд идущих узлов кольца,
      * отобранных для дальнейшей обработки.
      *
      * Цепочка всегда содержит как минимум два узла,
      * потому что одиночная точка не образует участок ломаной.
      */
-    public static class Chain {
-        public final List<Node2> nodes;
-        public final List<Point2> points;
-        public final List<Double> cumulativeLengths;
-        public final double totalLength;
+    static class Chain {
+        final List<Node2> nodes;
+        final List<Point2> points;
+        final List<Double> cumulativeLengths;
+        final double totalLength;
 
-        public Chain(List<Node2> nodes) {
+        Chain(List<Node2> nodes) {
             if (nodes.size() < 2) {
                 throw new IllegalArgumentException("Chain must contain at least 2 nodes");
             }
@@ -206,22 +304,22 @@ public class Node2ChainReducer {
             this.totalLength = length;
         }
 
-        public Node2 getFirst() {
+        Node2 getFirst() {
             return nodes.get(0);
         }
 
-        public Node2 getLast() {
+        Node2 getLast() {
             return nodes.get(nodes.size() - 1);
         }
 
-        public int size() {
+        int size() {
             return nodes.size();
         }
 
         /**
          * Возвращает точку на полилинии цепочки на заданном расстоянии от ее начала.
          */
-        public Point2 pointAtLength(double distanceFromStart) {
+        Point2 pointAtLength(double distanceFromStart) {
             if (distanceFromStart <= 0.0) {
                 return points.get(0);
             }

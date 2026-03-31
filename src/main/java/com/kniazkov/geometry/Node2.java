@@ -219,6 +219,11 @@ public class Node2 {
         );
     }
 
+    @Override
+    public String toString() {
+        return point.toString();
+    }
+
     /**
      * Пересчитывает всю геометрическую информацию узла по его текущим соседям.
      */
