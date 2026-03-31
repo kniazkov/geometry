@@ -59,8 +59,20 @@ public class OffsetContour {
     /**
      * Собирает объект класса OffsetContour.
      */
-    public static class Builder {
+    static class Builder {
+        /**
+         * Оригинальный, не упрощенный контур.
+         */
         private final Contour originalContour;
+
+        /**
+         * Сопоставление точек между оригинальным и упрощенным контуром.
+         */
+        private final Map<Point2, Set<Point2>> mappingOriginalToSimplified;
+
+        /**
+         * Смещенный контур.
+         */
         private Contour offsetContour;
 
         /**
@@ -72,22 +84,25 @@ public class OffsetContour {
         private final List<PointPair> correspondingPoints = new ArrayList<>();
 
 
-        public Builder(Contour originalContour) {
+        Builder(
+                Contour originalContour, Map<Point2, Set<Point2>> mappingOriginalToSimplified
+        ) {
             this.originalContour = originalContour;
+            this.mappingOriginalToSimplified = mappingOriginalToSimplified;
         }
 
-        public void setOffsetContour(Contour contour) {
+        void setOffsetContour(Contour contour) {
             this.offsetContour = contour;
         }
 
         /**
-         * Добавляет соответствие между точкой оригинального контура
+         * Добавляет соответствие между точкой упрощенного контура
          * и точкой смещенного контура.
          *
          * Одни и те же точки могут участвовать в нескольких соответствиях.
          */
-        public void addCorrespondingPoints(Point2 originalPoint, Point2 offsetPoint) {
-            correspondingPoints.add(new PointPair(originalPoint, offsetPoint));
+        void addCorrespondingPoints(Point2 simplifiedPoint, Point2 offsetPoint) {
+            correspondingPoints.add(new PointPair(simplifiedPoint, offsetPoint));
         }
 
         /**
@@ -98,7 +113,7 @@ public class OffsetContour {
          * - строятся обе двусторонние карты соответствий
          * - отдельно контролируется, что ни одна точка не была пропущена
          */
-        public OffsetContour build() {
+        OffsetContour build() {
             if (offsetContour == null) {
                 throw new IllegalStateException("Offset contour is not set");
             }
@@ -106,34 +121,41 @@ public class OffsetContour {
             Map<Integer, SortedSet<Integer>> originalToOffset = new HashMap<>();
             Map<Integer, SortedSet<Integer>> offsetToOriginal = new HashMap<>();
 
-            //Set<Point2> unusedOriginalPoints = new HashSet<>(originalContour.points);
-            //Set<Point2> unusedOffsetPoints = new HashSet<>(offsetContour.points);
+            Set<Point2> unusedOriginalPoints = new HashSet<>(originalContour.points);
+            Set<Point2> unusedOffsetPoints = new HashSet<>(offsetContour.points);
 
-            //for (PointPair pair : correspondingPoints) {
-                //int originalIndex = originalContour.getPointIndex(pair.originalPoint);
-                //if (originalIndex < 0) {
-                //    throw new IllegalStateException("Original point does not belong to original contour");
-                //}
+            for (PointPair pair : correspondingPoints) {
+                int offsetIndex = offsetContour.getPointIndex(pair.offsetPoint);
+                if (offsetIndex < 0) {
+                    throw new IllegalStateException("Offset point does not belong to offset contour");
+                }
 
-                //int offsetIndex = offsetContour.getPointIndex(pair.offsetPoint);
-                //if (offsetIndex < 0) {
-                //    throw new IllegalStateException("Offset point does not belong to offset contour");
-                //}
+                Set<Point2> originalPoints = mappingOriginalToSimplified.get(pair.simplifiedPoint);
+                if (originalPoints == null) {
+                    originalPoints = Set.of(pair.simplifiedPoint);
+                }
 
-                //addIndexMapping(originalToOffset, originalIndex, offsetIndex);
-                //addIndexMapping(offsetToOriginal, offsetIndex, originalIndex);
+                for (Point2 originalPoint : originalPoints) {
+                    int originalIndex = originalContour.getPointIndex(originalPoint);
+                    if (originalIndex < 0) {
+                        throw new IllegalStateException("Original point does not belong to original contour");
+                    }
 
-                //unusedOriginalPoints.remove(pair.originalPoint);
-                //unusedOffsetPoints.remove(pair.offsetPoint);
-            //}
+                    addIndexMapping(originalToOffset, originalIndex, offsetIndex);
+                    addIndexMapping(offsetToOriginal, offsetIndex, originalIndex);
 
-            //if (!unusedOriginalPoints.isEmpty()) {
-            //    throw new IllegalStateException("Some original contour points have no correspondence");
-            //}
+                    unusedOriginalPoints.remove(originalPoint);
+                    unusedOffsetPoints.remove(pair.offsetPoint);
+                }
+            }
 
-            //if (!unusedOffsetPoints.isEmpty()) {
-            //    throw new IllegalStateException("Some offset contour points have no correspondence");
-            //}
+            if (!unusedOriginalPoints.isEmpty()) {
+                throw new IllegalStateException("Some original contour points have no correspondence");
+            }
+
+            if (!unusedOffsetPoints.isEmpty()) {
+                throw new IllegalStateException("Some offset contour points have no correspondence");
+            }
 
             return new OffsetContour(
                     originalContour,
@@ -175,7 +197,7 @@ public class OffsetContour {
         /**
          * Одна накопленная пара соответствующих точек.
          */
-        private record PointPair(Point2 originalPoint, Point2 offsetPoint) {
+        private record PointPair(Point2 simplifiedPoint, Point2 offsetPoint) {
         }
     }
 }

@@ -63,7 +63,7 @@ public class ContourOffsetter {
             Вырожденный случай.
          */
         if (distance == 0.0) {
-            OffsetContour.Builder builder = new OffsetContour.Builder(contour);
+            OffsetContour.Builder builder = new OffsetContour.Builder(contour, Map.of());
             builder.setOffsetContour(contour);
             for (Point2 point : contour.points) {
                 builder.addCorrespondingPoints(point, point);
@@ -98,13 +98,13 @@ public class ContourOffsetter {
         final Optional<Node2ProcessingResult> reduced;
         if (distance > 0.0) {
             Node2ChainReducer reducer = new Node2ChainReducer(
-                absDistance,
+                absDistance * 1.1,
                 node -> !node.isOuter()
             );
             reduced = reducer.reduce(list);
         } else {
             Node2ChainReducer reducer = new Node2ChainReducer(
-                absDistance,
+                absDistance * 1.1,
                 node -> node.isOuter()
             );
             reduced = reducer.reduce(list);
@@ -117,11 +117,10 @@ public class ContourOffsetter {
             return List.of();
         }
 
-        Contour simplified = Contour.fromLinkedList(contour.type, reduced.get().node);
-
         /*
-            Строим массив смещенных сегментов упрощенного контура.
+            Строим упрощенный контур и массив смещенных сегментов упрощенного контура.
          */
+        Contour simplified = Contour.fromLinkedList(contour.type, reduced.get().node);
         List<Segment2> simplifiedSegments = simplified.toSegments();
         List<Segment2> offsetSegments = new ArrayList<>(simplifiedSegments.size());
         for (Segment2 segment : simplified.toSegments()) {
@@ -145,7 +144,10 @@ public class ContourOffsetter {
 
             Это дает вершину, соответствующую первой точке контура.
          */
-        OffsetContour.Builder builder = new OffsetContour.Builder(contour);
+        OffsetContour.Builder builder = new OffsetContour.Builder(
+            contour,
+            reduced.get().pointMapping
+        );
         List<Point2> offsetPoints = new ArrayList<>(offsetSegments.size());
 
         int size = offsetSegments.size();
