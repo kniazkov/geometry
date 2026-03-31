@@ -2,8 +2,12 @@ package com.kniazkov.geometry;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Выполняет сложное упрощение кольца узлов за несколько проходов.
@@ -219,6 +223,62 @@ public class Node2ChainReducer {
     }
 
     /**
+     * Строит соответствия между новыми и старыми точками одной цепочки.
+     * Простейшее сопоставление:
+     * - если одна новая точка — к ней идут все старые
+     * - иначе:
+     *   - первая новая -> первая старая
+     *   - последняя новая -> последняя старая
+     *   - остальные старые -> ближайшая новая (по квадрату расстояния)
+     */
+    Map<Point2,Set<Point2>> buildPointMapping(Chain chain, List<Point2> newPoints) {
+        Map<Point2, Set<Point2>> mapping = new HashMap<>();
+
+        /*
+             Одна точка — все сопоставляется с ней.
+         */
+        if (newPoints.size() == 1) {
+            mapping.put(newPoints.get(0), new HashSet<>(chain.points));
+            return mapping;
+        }
+
+        /*
+            Иначе, первая и последняя точки сопоставляется однозначно.
+         */
+        for (Point2 p : newPoints) {
+            mapping.put(p, new HashSet<>());
+        }
+
+        Point2 firstNew = newPoints.get(0);
+        Point2 lastNew = newPoints.get(newPoints.size() - 1);
+
+        mapping.get(firstNew).add(chain.points.get(0));
+        mapping.get(lastNew).add(chain.points.get(chain.points.size() - 1));
+
+        /*
+            Все остальные — к ближайшей новой.
+         */
+        for (int i = 1; i < chain.points.size() - 1; i++) {
+            Point2 oldPoint = chain.points.get(i);
+
+            int bestIndex = 0;
+            double bestDistance = oldPoint.distanceSquaredTo(newPoints.get(0));
+
+            for (int j = 1; j < newPoints.size(); j++) {
+                double distance = oldPoint.distanceSquaredTo(newPoints.get(j));
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = j;
+                }
+            }
+
+            mapping.get(newPoints.get(bestIndex)).add(oldPoint);
+        }
+
+        return mapping;
+    }
+    
+    /**
      * Строит точки цепочки для заданного числа интервалов.
      *
      * Если intervalCount == 1, остаются только первая и последняя точки.
@@ -241,7 +301,7 @@ public class Node2ChainReducer {
         }
         result.add(chain.points.get(chain.points.size() - 1));
 
-        return Collections.unmodifiableList(result);
+        return result;
     }
 
     /**
