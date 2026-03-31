@@ -13,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");

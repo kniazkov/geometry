@@ -213,16 +213,20 @@ public class Node2 {
      * Пересчитывает всю геометрическую информацию узла по его текущим соседям.
      */
     private void update() {
-        distanceToPrevious = point.distanceTo(previous.point);
-        distanceToNext = point.distanceTo(next.point);
-
         Vector2 toPrevious = previous.point.subtract(point);
         Vector2 toNext = next.point.subtract(point);
 
-        double prevLength = toPrevious.length();
-        double nextLength = toNext.length();
+        distanceToPrevious = toPrevious.length();
+        distanceToNext = toNext.length();
 
-        double cos = toPrevious.dot(toNext) / (prevLength * nextLength);
+        if (distanceToPrevious <= Point2.EPSILON || distanceToNext <= Point2.EPSILON) {
+            angle = Math.PI;
+            outer = false;
+            straight = true;
+            return;
+        }
+
+        double cos = toPrevious.dot(toNext) / (distanceToPrevious * distanceToNext);
         cos = Math.max(-1.0, Math.min(1.0, cos));
         angle = Math.acos(cos);
 
