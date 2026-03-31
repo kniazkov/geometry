@@ -16,10 +16,10 @@ import java.util.Optional;
  */
 public class Node2ChainReducer {
     private final double distance;
-    private final NodeSelectionCriteria criteria;
+    private final Node2SelectionCriteria criteria;
 
 
-    public Node2ChainReducer(double distance, NodeSelectionCriteria criteria) {
+    public Node2ChainReducer(double distance, Node2SelectionCriteria criteria) {
         this.distance = distance;
         this.criteria = criteria;
     }
@@ -38,7 +38,7 @@ public class Node2ChainReducer {
         return distance;
     }
 
-    public NodeSelectionCriteria getCriteria() {
+    public Node2SelectionCriteria getCriteria() {
         return criteria;
     }
 
@@ -132,7 +132,9 @@ public class Node2ChainReducer {
      */
     public static class Chain {
         public final List<Node2> nodes;
-
+        public final List<Point2> points;
+        public final List<Double> cumulativeLengths;
+        public final double totalLength;
 
         public Chain(List<Node2> nodes) {
             if (nodes.isEmpty()) {
@@ -140,6 +142,29 @@ public class Node2ChainReducer {
             }
 
             this.nodes = Collections.unmodifiableList(new ArrayList<>(nodes));
+
+            List<Point2> points = new ArrayList<>(nodes.size());
+            List<Double> cumulativeLengths = new ArrayList<>(nodes.size());
+
+            double length = 0.0;
+            cumulativeLengths.add(length);
+
+            Point2 previousPoint = null;
+            for (Node2 node : nodes) {
+                Point2 point = node.point;
+                points.add(point);
+
+                if (previousPoint != null) {
+                    length += previousPoint.distanceTo(point);
+                    cumulativeLengths.add(length);
+                }
+
+                previousPoint = point;
+            }
+
+            this.points = Collections.unmodifiableList(points);
+            this.cumulativeLengths = Collections.unmodifiableList(cumulativeLengths);
+            this.totalLength = length;
         }
 
         public Node2 getFirst() {
@@ -152,6 +177,52 @@ public class Node2ChainReducer {
 
         public int size() {
             return nodes.size();
+        }
+
+        public List<Point2> getPoints() {
+            return points;
+        }
+
+        public List<Double> getCumulativeLengths() {
+            return cumulativeLengths;
+        }
+
+        public double getTotalLength() {
+            return totalLength;
+        }
+
+        public Point2 pointAtLength(double distanceFromStart) {
+            if (distanceFromStart <= 0.0) {
+                return points.get(0);
+            }
+
+            if (distanceFromStart >= totalLength) {
+                return points.get(points.size() - 1);
+            }
+
+            for (int i = 1; i < points.size(); i++) {
+                double segmentStart = cumulativeLengths.get(i - 1);
+                double segmentEnd = cumulativeLengths.get(i);
+
+                if (distanceFromStart <= segmentEnd) {
+                    double segmentLength = segmentEnd - segmentStart;
+
+                    if (segmentLength <= Point2.EPSILON) {
+                        return points.get(i);
+                    }
+
+                    double t = (distanceFromStart - segmentStart) / segmentLength;
+                    Point2 a = points.get(i - 1);
+                    Point2 b = points.get(i);
+
+                    return new Point2(
+                        a.x + (b.x - a.x) * t,
+                        a.y + (b.y - a.y) * t
+                    );
+                }
+            }
+
+            return points.get(points.size() - 1);
         }
     }
 }

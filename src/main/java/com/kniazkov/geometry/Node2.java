@@ -160,7 +160,7 @@ public class Node2 {
      *
      * Возвращает ссылку на любой оставшийся узел списка.
      */
-    public static Node2 removeNodesByCriteria(Node2 start, NodeSelectionCriteria criteria) {
+    public static Node2 removeNodesByCriteria(Node2 start, Node2SelectionCriteria criteria) {
         while (criteria.test(start)) {
             start = start.next;
         }
