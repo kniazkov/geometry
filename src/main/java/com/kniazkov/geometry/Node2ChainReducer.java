@@ -35,7 +35,51 @@ public class Node2ChainReducer {
      * корректный контур как минимум из трех точек.
      */
     public Optional<Node2ProcessingResult> reduce(Node2 start) {
-        return Optional.empty();
+        List<Chain> chains = findChains(start);
+
+        /*
+            Нет цепочек — возвращаем исходный результат как есть.
+         */
+        if (chains.isEmpty()) {
+            Map<Point2, Set<Point2>> identityMapping = new HashMap<>();
+
+            Node2 node = start;
+            do {
+                identityMapping.put(node.point, Set.of(node.point));
+                node = node.getNext();
+            } while (node != start);
+
+            return Optional.of(new Node2ProcessingResult(start, identityMapping));
+        }
+
+        /*
+            Строим замены.
+         */
+        Map<Node2, ChainReplacement> replacements = buildReplacements(chains);
+
+        /*
+            Строим новые точки.
+         */
+        List<Point2> newPoints = buildResultPoints(start, replacements);
+
+        /*
+            Проверка минимального количества точек.
+         */
+        if (newPoints.size() < 3) {
+            return Optional.empty();
+        }
+
+        /*
+            Создаем новое кольцо.
+         */
+        Node2 newStart = Node2.fromPoints(newPoints);
+
+        /*
+            Строим сопоставление старых точек и новых.
+         */
+        Map<Point2, Set<Point2>> mapping = buildResultMapping(start, replacements);
+
+        return Optional.of(new Node2ProcessingResult(newStart, mapping));
     }
 
     public double getDistance() {
@@ -319,6 +363,93 @@ public class Node2ChainReducer {
     }
 
     /**
+     * Строит замены для всех найденных цепочек.
+     *
+     * Для каждой цепочки:
+     * - вычисляются новые точки;
+     * - строится сопоставление новых точек со старыми;
+     * - результат индексируется по первому узлу цепочки.
+     *
+     * Используется далее для сборки итогового кольца и общей карты соответствий.
+     */
+    private Map<Node2, ChainReplacement> buildReplacements(List<Chain> chains) {
+        Map<Node2, ChainReplacement> result = new HashMap<>();
+
+        for (Chain chain : chains) {
+            List<Point2> newPoints = buildReplacementPoints(chain);
+            Map<Point2, Set<Point2>> mapping = buildPointMapping(chain, newPoints);
+
+            result.put(chain.getFirst(), new ChainReplacement(chain, newPoints, mapping));
+        }
+
+        return result;
+    }
+
+    /**
+     * Формирует новый список точек всего кольца с учетом замен цепочек.
+     *
+     * Логика:
+     * - обход выполняется по исходному кольцу;
+     * - если текущий узел является началом цепочки, добавляются все новые точки цепочки,
+     *   а исходные узлы цепочки пропускаются;
+     * - если узел не входит в цепочку, его точка переносится без изменений.
+     *
+     * Порядок обхода сохраняется.
+     */
+    private List<Point2> buildResultPoints(Node2 start, Map<Node2, ChainReplacement> replacements) {
+        List<Point2> result = new ArrayList<>();
+
+        Node2 node = start;
+        do {
+            ChainReplacement replacement = replacements.get(node);
+
+            if (replacement != null) {
+                result.addAll(replacement.newPoints);
+
+                // перепрыгиваем всю цепочку
+                node = replacement.chain.getLast().getNext();
+            } else {
+                result.add(node.point);
+                node = node.getNext();
+            }
+
+        } while (node != start);
+
+        return result;
+    }
+
+    /**
+     * Строит итоговое соответствие между новыми и старыми точками всего кольца.
+     *
+     * Логика:
+     * - для цепочек используется заранее построенное сопоставление;
+     * - для узлов вне цепочек каждая точка сопоставляется сама с собой.
+     *
+     * Гарантируется, что каждая исходная точка входит ровно в одно множество результата.
+     */
+    private Map<Point2, Set<Point2>> buildResultMapping(
+        Node2 start,
+        Map<Node2, ChainReplacement> replacements
+    ) {
+        Map<Point2, Set<Point2>> result = new HashMap<>();
+
+        Node2 node = start;
+        do {
+            ChainReplacement replacement = replacements.get(node);
+
+            if (replacement != null) {
+                result.putAll(replacement.mapping);
+                node = replacement.chain.getLast().getNext();
+            } else {
+                result.put(node.point, Set.of(node.point));
+                node = node.getNext();
+            }
+        } while (node != start);
+
+        return result;
+    }
+
+    /**
      * Непрерывная цепочка подряд идущих узлов кольца,
      * отобранных для дальнейшей обработки.
      *
@@ -411,6 +542,24 @@ public class Node2ChainReducer {
             }
 
             return points.get(points.size() - 1);
+        }
+    }
+
+    /**
+     * Результат обработки одной цепочки:
+     * - исходная цепочка узлов;
+     * - новые точки, которыми она заменяется;
+     * - соответствие новых точек старым.
+     */
+    private static class ChainReplacement {
+        final Chain chain;
+        final List<Point2> newPoints;
+        final Map<Point2, Set<Point2>> mapping;
+
+        ChainReplacement(Chain chain, List<Point2> newPoints, Map<Point2, Set<Point2>> mapping) {
+            this.chain = chain;
+            this.newPoints = newPoints;
+            this.mapping = mapping;
         }
     }
 }
