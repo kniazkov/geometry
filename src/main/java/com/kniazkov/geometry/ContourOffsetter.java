@@ -95,19 +95,29 @@ public class ContourOffsetter {
         Node2 list = contour.toLinkedList();
         double absDistance = Math.abs(distance);
 
+        final Optional<Node2ProcessingResult> reduced;
         if (distance > 0.0) {
-            list = Node2.removeNodesByCriteria(
-                list,
-                node -> !node.isOuter() && node.getDistanceToPrevious() < absDistance
+            Node2ChainReducer reducer = new Node2ChainReducer(
+                absDistance,
+                node -> !node.isOuter()
             );
+            reduced = reducer.reduce(list);
         } else {
-            list = Node2.removeNodesByCriteria(
-                list,
-                node -> node.isOuter() && node.getDistanceToPrevious() < absDistance
+            Node2ChainReducer reducer = new Node2ChainReducer(
+                absDistance,
+                node -> node.isOuter()
             );
+            reduced = reducer.reduce(list);
         }
 
-        Contour simplified = Contour.fromLinkedList(contour.type, list);
+        /*
+         * Если в упрощенном контуре не осталось точек, значит нам нечего сдвигать.
+         */
+        if (reduced.isEmpty()) {
+            return List.of();
+        }
+
+        Contour simplified = Contour.fromLinkedList(contour.type, reduced.get().node);
 
         /*
             Строим массив смещенных сегментов упрощенного контура.

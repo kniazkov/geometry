@@ -106,26 +106,26 @@ public class OffsetContour {
             Map<Integer, SortedSet<Integer>> originalToOffset = new HashMap<>();
             Map<Integer, SortedSet<Integer>> offsetToOriginal = new HashMap<>();
 
-            Set<Point2> unusedOriginalPoints = new HashSet<>(originalContour.points);
-            Set<Point2> unusedOffsetPoints = new HashSet<>(offsetContour.points);
+            //Set<Point2> unusedOriginalPoints = new HashSet<>(originalContour.points);
+            //Set<Point2> unusedOffsetPoints = new HashSet<>(offsetContour.points);
 
-            for (PointPair pair : correspondingPoints) {
-                int originalIndex = originalContour.getPointIndex(pair.originalPoint);
-                if (originalIndex < 0) {
-                    throw new IllegalStateException("Original point does not belong to original contour");
-                }
+            //for (PointPair pair : correspondingPoints) {
+                //int originalIndex = originalContour.getPointIndex(pair.originalPoint);
+                //if (originalIndex < 0) {
+                //    throw new IllegalStateException("Original point does not belong to original contour");
+                //}
 
-                int offsetIndex = offsetContour.getPointIndex(pair.offsetPoint);
-                if (offsetIndex < 0) {
-                    throw new IllegalStateException("Offset point does not belong to offset contour");
-                }
+                //int offsetIndex = offsetContour.getPointIndex(pair.offsetPoint);
+                //if (offsetIndex < 0) {
+                //    throw new IllegalStateException("Offset point does not belong to offset contour");
+                //}
 
-                addIndexMapping(originalToOffset, originalIndex, offsetIndex);
-                addIndexMapping(offsetToOriginal, offsetIndex, originalIndex);
+                //addIndexMapping(originalToOffset, originalIndex, offsetIndex);
+                //addIndexMapping(offsetToOriginal, offsetIndex, originalIndex);
 
-                unusedOriginalPoints.remove(pair.originalPoint);
-                unusedOffsetPoints.remove(pair.offsetPoint);
-            }
+                //unusedOriginalPoints.remove(pair.originalPoint);
+                //unusedOffsetPoints.remove(pair.offsetPoint);
+            //}
 
             //if (!unusedOriginalPoints.isEmpty()) {
             //    throw new IllegalStateException("Some original contour points have no correspondence");
