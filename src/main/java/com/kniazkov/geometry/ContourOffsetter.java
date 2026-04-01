@@ -58,12 +58,12 @@ public class ContourOffsetter {
      *
      * Пока метод не реализован.
      */
-    public List<OffsetContour> offset(double distance) {
+    public List<OffsetResult> offset(double distance) {
         /*
             Вырожденный случай.
          */
         if (distance == 0.0) {
-            OffsetContour.Builder builder = new OffsetContour.Builder(contour, Map.of());
+            OffsetResult.Builder builder = new OffsetResult.Builder(contour, Map.of());
             builder.setOffsetContour(contour);
             for (Point2 point : contour.points) {
                 builder.addCorrespondingPoints(point, point);
@@ -144,7 +144,7 @@ public class ContourOffsetter {
 
             Это дает вершину, соответствующую первой точке контура.
          */
-        OffsetContour.Builder builder = new OffsetContour.Builder(
+        OffsetResult.Builder builder = new OffsetResult.Builder(
             contour,
             reduced.get().pointMapping
         );
@@ -187,8 +187,21 @@ public class ContourOffsetter {
             }
         }
 
+        /*
+            Строим контур и связи между оригинальным контуром.
+         */
         builder.setOffsetContour(new Contour(offsetPoints).withType(contour.type));
-        return List.of(builder.build());
+        OffsetResult offsetResult = builder.build();
+
+        /*
+            Проверяем на самопересечение.
+         */
+        ContourIntersectionFinder finder = new ContourIntersectionFinder(offsetResult.contour);
+        List<ContourIntersection> intersections = finder.findSelfIntersections();
+        if (intersections.isEmpty()) {
+            return List.of(builder.build());
+        }
+        return removeLoops(offsetResult, intersections);
     }
 
     /**
@@ -211,7 +224,7 @@ public class ContourOffsetter {
         Point2 c,
         double radius,
         List<Point2> points,
-        OffsetContour.Builder builder
+        OffsetResult.Builder builder
     ) {
         if (radius <= 0.0) {
             throw new IllegalArgumentException("Radius must be positive");
@@ -278,5 +291,15 @@ public class ContourOffsetter {
             points.add(point);
             builder.addCorrespondingPoints(c, point);
         }
+    }
+
+    /**
+     * Удаляет петли из смещенного контура, разделяя контур на несколько контуров.
+     */
+    private static List<OffsetResult> removeLoops(
+        OffsetResult offsetResult,
+        List<ContourIntersection> intersections)
+    {
+        return List.of(offsetResult);
     }
 }

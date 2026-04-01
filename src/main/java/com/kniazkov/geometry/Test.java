@@ -81,16 +81,16 @@ public class Test {
         for (Contour contour : classified) {
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
             ContourOffsetter offsetter = new ContourOffsetter(contour);
-            List<OffsetContour> offsetList = measure(
+            List<OffsetResult> offsetList = measure(
                     "Offset",
-                    () -> offsetter.offset(15.0)
+                    () -> offsetter.offset(-15.0)
             );
-            for (OffsetContour offset : offsetList) {
-                svg.addSegments(offset.offset.toSegments(), 1, offset.offset.type == Contour.Type.INNER ? "orange" : "cyan", SvgStrokeStyle.SOLID);
+            for (OffsetResult offset : offsetList) {
+                svg.addSegments(offset.contour.toSegments(), 1, offset.contour.type == Contour.Type.INNER ? "orange" : "cyan", SvgStrokeStyle.SOLID);
                 for (Integer originalIndex : offset.originalToOffset.keySet()) {
                     for (Integer offsetIndex : offset.originalToOffset.get(originalIndex)) {
                         svg.addSegments(
-                                List.of(new Segment2(offset.original.points.get(originalIndex), offset.offset.points.get(offsetIndex))),
+                                List.of(new Segment2(offset.originalContour.points.get(originalIndex), offset.contour.points.get(offsetIndex))),
                                 1,
                                 "gray",
                                 SvgStrokeStyle.SOLID

@@ -22,16 +22,16 @@ import java.util.TreeSet;
  * Одной точке исходного контура может соответствовать несколько точек смещенного контура.
  * Одной точке смещенного контура может соответствовать несколько точек исходного контура.
  */
-public class OffsetContour {
+public class OffsetResult {
     /**
      * Оригинальный контур.
      */
-    public final Contour original;
+    public final Contour originalContour;
 
     /**
      * Смещенный контур.
      */
-    public final Contour offset;
+    public final Contour contour;
 
     /**
      * original index -> ordered set of offset indices
@@ -44,14 +44,14 @@ public class OffsetContour {
     public final Map<Integer, SortedSet<Integer>> offsetToOriginal;
 
 
-    private OffsetContour(
-            Contour original,
-            Contour offset,
+    private OffsetResult(
+            Contour originalContour,
+            Contour contour,
             Map<Integer, SortedSet<Integer>> originalToOffset,
             Map<Integer, SortedSet<Integer>> offsetToOriginal
     ) {
-        this.original = original;
-        this.offset = offset;
+        this.originalContour = originalContour;
+        this.contour = contour;
         this.originalToOffset = originalToOffset;
         this.offsetToOriginal = offsetToOriginal;
     }
@@ -113,7 +113,7 @@ public class OffsetContour {
          * - строятся обе двусторонние карты соответствий
          * - отдельно контролируется, что ни одна точка не была пропущена
          */
-        OffsetContour build() {
+        OffsetResult build() {
             if (offsetContour == null) {
                 throw new IllegalStateException("Offset contour is not set");
             }
@@ -157,7 +157,7 @@ public class OffsetContour {
                 throw new IllegalStateException("Some offset contour points have no correspondence");
             }
 
-            return new OffsetContour(
+            return new OffsetResult(
                     originalContour,
                     offsetContour,
                     freezeIndexMap(originalToOffset),

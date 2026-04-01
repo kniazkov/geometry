@@ -53,6 +53,12 @@ public class Node2ChainReducer {
         }
 
         /*
+            Для корректной сборки результата начинаем обход
+            с первого узла первой найденной цепочки.
+         */
+        Node2 assemblyStart = chains.get(0).getFirst();
+
+        /*
             Строим замены.
          */
         Map<Node2, ChainReplacement> replacements = buildReplacements(chains);
@@ -60,7 +66,7 @@ public class Node2ChainReducer {
         /*
             Строим новые точки.
          */
-        List<Point2> newPoints = buildResultPoints(start, replacements);
+        List<Point2> newPoints = buildResultPoints(assemblyStart, replacements);
 
         /*
             Проверка минимального количества точек.
@@ -77,7 +83,7 @@ public class Node2ChainReducer {
         /*
             Строим сопоставление старых точек и новых.
          */
-        Map<Point2, Set<Point2>> mapping = buildResultMapping(start, replacements);
+        Map<Point2, Set<Point2>> mapping = buildResultMapping(assemblyStart, replacements);
 
         return Optional.of(new Node2ProcessingResult(newStart, mapping));
     }
