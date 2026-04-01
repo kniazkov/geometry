@@ -297,7 +297,10 @@ public class ContourOffsetter {
         PointsMapping pointsMapping,
         List<ContourIntersection> intersections)
     {
-        intersections = ContourIntersection.sortByNesting(intersections, offsetContour.points.size());
+        ContourIntersectionSorter intersectionSorter = new ContourIntersectionSorter(
+            offsetContour,
+            intersections
+        );
         return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
     }
 
@@ -325,5 +328,38 @@ public class ContourOffsetter {
             }
             offsetToOriginal.computeIfAbsent(offset, x -> new HashSet<>()).addAll(original);
         }
+    }
+
+    /**
+     * Кольцевой граф, содержащий сегменты контура.
+     */
+    private static class Graph {
+        final Graph parent;
+        final Node begin;
+
+        Graph(Graph parent, Node begin) {
+            this.parent = parent;
+            this.begin = begin;
+        }
+
+        List<Point2> toPoints() {
+            final List<Point2> list = new ArrayList<>();
+            Node node = begin;
+            do {
+                list.add(node.segment.a);
+                node = node.next;
+            } while (node != begin);
+            return list;
+        }
+    }
+
+    /**
+     * Узел графа, содержащего сегменты контура.
+     */
+    private static class Node {
+        Graph graph;
+        Segment2 segment;
+        Node previous;
+        Node next;
     }
 }
