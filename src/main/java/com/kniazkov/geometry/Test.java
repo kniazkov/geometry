@@ -13,7 +13,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("D:\\Models\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -83,7 +83,7 @@ public class Test {
             ContourOffsetter offsetter = new ContourOffsetter(contour);
             List<OffsetResult> offsetList = measure(
                     "Offset",
-                    () -> offsetter.offset(-15.0)
+                    () -> offsetter.offset(-5.0)
             );
             for (OffsetResult offset : offsetList) {
                 svg.addSegments(offset.contour.toSegments(), 1, offset.contour.type == Contour.Type.INNER ? "orange" : "cyan", SvgStrokeStyle.SOLID);

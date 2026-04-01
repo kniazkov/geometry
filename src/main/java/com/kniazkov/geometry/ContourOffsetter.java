@@ -63,12 +63,11 @@ public class ContourOffsetter {
             Вырожденный случай.
          */
         if (distance == 0.0) {
-            OffsetResult.Builder builder = new OffsetResult.Builder(contour, Map.of());
-            builder.setOffsetContour(contour);
+            Map<Point2, Set<Point2>> mapping = new HashMap<>();
             for (Point2 point : contour.points) {
-                builder.addCorrespondingPoints(point, point);
+                mapping.put(point, Set.of(point));
             }
-            return List.of(builder.build());
+            return List.of(new OffsetResult(contour, contour, mapping));
         }
 
         /*
@@ -144,17 +143,15 @@ public class ContourOffsetter {
 
             Это дает вершину, соответствующую первой точке контура.
          */
-        OffsetResult.Builder builder = new OffsetResult.Builder(
-            contour,
-            reduced.get().pointMapping
-        );
+
         List<Point2> offsetPoints = new ArrayList<>(offsetSegments.size());
+        PointsMapping pointsMapping = new PointsMapping(reduced.get().pointMapping);
 
         int size = offsetSegments.size();
         for (int i = 0; i < size; i++) {
             int previousIndex = (i - 1 + size) % size;
 
-            Segment2 previousOriginalSegment = simplifiedSegments.get(previousIndex);
+            Segment2 previousSimplifiedSegment = simplifiedSegments.get(previousIndex);
             Segment2 previousOffsetSegment = offsetSegments.get(previousIndex);
             Segment2 currentOffsetSegment = offsetSegments.get(i);
 
@@ -163,9 +160,9 @@ public class ContourOffsetter {
             if (intersection.isPresent()) {
                 SegmentIntersection value = intersection.get();
 
-                if (value instanceof Point2 point) {
-                    offsetPoints.add(point);
-                    builder.addCorrespondingPoints(previousOriginalSegment.b, point);
+                if (value instanceof Point2 offsetPoint) {
+                    offsetPoints.add(offsetPoint);
+                    pointsMapping.addPair(previousSimplifiedSegment.b, offsetPoint);
                 } else if (value instanceof Segment2) {
                     throw new IllegalStateException("Unexpected overlapping offset segments");
                 } else {
@@ -174,7 +171,7 @@ public class ContourOffsetter {
             } else {
                 Point2 arcStart = previousOffsetSegment.b;
                 Point2 arcEnd = currentOffsetSegment.a;
-                Point2 center = previousOriginalSegment.b;
+                Point2 center = previousSimplifiedSegment.b;
 
                 addArcPoints(
                     arcStart,
@@ -182,26 +179,25 @@ public class ContourOffsetter {
                     center,
                     absDistance,
                     offsetPoints,
-                    builder
+                    pointsMapping
                 );
             }
         }
 
         /*
-            Строим контур и связи между оригинальным контуром.
+            Строим контур.
          */
-        builder.setOffsetContour(new Contour(offsetPoints).withType(contour.type));
-        OffsetResult offsetResult = builder.build();
+        Contour offsetContour = new Contour(offsetPoints).withType(contour.type);
 
         /*
-            Проверяем на самопересечение.
+            Проверяем на самопересечение. Если их нет, возвращаем результат.
          */
-        ContourIntersectionFinder finder = new ContourIntersectionFinder(offsetResult.contour);
+        ContourIntersectionFinder finder = new ContourIntersectionFinder(offsetContour);
         List<ContourIntersection> intersections = finder.findSelfIntersections();
         if (intersections.isEmpty()) {
-            return List.of(builder.build());
+            return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
         }
-        return removeLoops(offsetResult, intersections);
+        return removeLoops(offsetContour, pointsMapping, intersections);
     }
 
     /**
@@ -224,7 +220,7 @@ public class ContourOffsetter {
         Point2 c,
         double radius,
         List<Point2> points,
-        OffsetResult.Builder builder
+        PointsMapping pointsMapping
     ) {
         if (radius <= 0.0) {
             throw new IllegalArgumentException("Radius must be positive");
@@ -289,17 +285,44 @@ public class ContourOffsetter {
                     c.y + radius * Math.sin(angle)
             );
             points.add(point);
-            builder.addCorrespondingPoints(c, point);
+            pointsMapping.addPair(c, point);
         }
     }
 
     /**
      * Удаляет петли из смещенного контура, разделяя контур на несколько контуров.
      */
-    private static List<OffsetResult> removeLoops(
-        OffsetResult offsetResult,
+    private List<OffsetResult> removeLoops(
+        Contour offsetContour,
+        PointsMapping pointsMapping,
         List<ContourIntersection> intersections)
     {
-        return List.of(offsetResult);
+        return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
+    }
+
+    /**
+     * Вспомогательный класс для сопоставления точек.
+     */
+    private static class PointsMapping {
+        final Map<Point2, Set<Point2>> simplifiedToOriginal;
+        final Map<Point2, Set<Point2>> originalToOffset;
+        final Map<Point2, Set<Point2>> offsetToOriginal;
+
+        PointsMapping(Map<Point2, Set<Point2>> simplifiedToOriginal) {
+            this.simplifiedToOriginal = simplifiedToOriginal;
+            this.originalToOffset = new HashMap<>();
+            this.offsetToOriginal = new HashMap<>();
+        }
+
+        public void addPair(Point2 simplified, Point2 offset) {
+            Set<Point2> original = simplifiedToOriginal.get(simplified);
+            if (original == null) {
+                throw new IllegalStateException("Can't find the original points");
+            }
+            for (Point2 point : original) {
+                originalToOffset.computeIfAbsent(point, x -> new HashSet<>()).add(offset);
+            }
+            offsetToOriginal.computeIfAbsent(offset, x -> new HashSet<>()).addAll(original);
+        }
     }
 }

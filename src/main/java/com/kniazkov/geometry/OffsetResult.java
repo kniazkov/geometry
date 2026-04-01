@@ -44,160 +44,46 @@ public class OffsetResult {
     public final Map<Integer, SortedSet<Integer>> offsetToOriginal;
 
 
-    private OffsetResult(
+    public OffsetResult(
             Contour originalContour,
-            Contour contour,
-            Map<Integer, SortedSet<Integer>> originalToOffset,
-            Map<Integer, SortedSet<Integer>> offsetToOriginal
+            Contour offsetContour,
+            Map<Point2, Set<Point2>> offsetToOriginalPoints
     ) {
         this.originalContour = originalContour;
-        this.contour = contour;
-        this.originalToOffset = originalToOffset;
-        this.offsetToOriginal = offsetToOriginal;
+        this.contour = offsetContour;
+
+        Map<Integer, SortedSet<Integer>> originalToOffsetIndices = new HashMap<>();
+        Map<Integer, SortedSet<Integer>> offsetToOriginalIndices = new HashMap<>();
+
+        for (int offsetIndex = 0; offsetIndex < offsetContour.points.size(); offsetIndex++) {
+            Point2 offsetPoint = offsetContour.points.get(offsetIndex);
+            Set<Point2> originalPoints = offsetToOriginalPoints.computeIfAbsent(offsetPoint, x -> Set.of());
+            Set<Integer> originalIndices = offsetToOriginalIndices.computeIfAbsent(offsetIndex, x -> new TreeSet<>());
+            for (Point2 originalPoint : originalPoints) {
+                int originalIndex = originalContour.getPointIndex(originalPoint);
+                if (originalIndex < 0) {
+                    throw new IllegalStateException("Original point does not belong to original contour");
+                }
+                originalToOffsetIndices.computeIfAbsent(originalIndex, x -> new TreeSet<>()).add(offsetIndex);
+                originalIndices.add(originalIndex);
+            }
+        }
+
+        this.originalToOffset = unmodifiableIndexMap(originalToOffsetIndices);
+        this.offsetToOriginal = unmodifiableIndexMap(offsetToOriginalIndices);
     }
 
     /**
-     * Собирает объект класса OffsetContour.
+     * Делает карту и ее множества неизменяемыми.
      */
-    static class Builder {
-        /**
-         * Оригинальный, не упрощенный контур.
-         */
-        private final Contour originalContour;
-
-        /**
-         * Сопоставление точек между оригинальным и упрощенным контуром.
-         */
-        private final Map<Point2, Set<Point2>> mappingOriginalToSimplified;
-
-        /**
-         * Смещенный контур.
-         */
-        private Contour offsetContour;
-
-        /**
-         * Накопленные соответствия между точками.
-         *
-         * Здесь пока хранятся сами точки, потому что смещенный контур
-         * может быть задан позже.
-         */
-        private final List<PointPair> correspondingPoints = new ArrayList<>();
-
-
-        Builder(
-                Contour originalContour, Map<Point2, Set<Point2>> mappingOriginalToSimplified
-        ) {
-            this.originalContour = originalContour;
-            this.mappingOriginalToSimplified = mappingOriginalToSimplified;
-        }
-
-        void setOffsetContour(Contour contour) {
-            this.offsetContour = contour;
-        }
-
-        /**
-         * Добавляет соответствие между точкой упрощенного контура
-         * и точкой смещенного контура.
-         *
-         * Одни и те же точки могут участвовать в нескольких соответствиях.
-         */
-        void addCorrespondingPoints(Point2 simplifiedPoint, Point2 offsetPoint) {
-            correspondingPoints.add(new PointPair(simplifiedPoint, offsetPoint));
-        }
-
-        /**
-         * Собирает окончательный результат смещения.
-         *
-         * Во время сборки:
-         * - точки превращаются в индексы через Contour.getPointIndex(...)
-         * - строятся обе двусторонние карты соответствий
-         * - отдельно контролируется, что ни одна точка не была пропущена
-         */
-        OffsetResult build() {
-            if (offsetContour == null) {
-                throw new IllegalStateException("Offset contour is not set");
-            }
-
-            Map<Integer, SortedSet<Integer>> originalToOffset = new HashMap<>();
-            Map<Integer, SortedSet<Integer>> offsetToOriginal = new HashMap<>();
-
-            Set<Point2> unusedOriginalPoints = new HashSet<>(originalContour.points);
-            Set<Point2> unusedOffsetPoints = new HashSet<>(offsetContour.points);
-
-            for (PointPair pair : correspondingPoints) {
-                int offsetIndex = offsetContour.getPointIndex(pair.offsetPoint);
-                if (offsetIndex < 0) {
-                    throw new IllegalStateException("Offset point does not belong to offset contour");
-                }
-
-                Set<Point2> originalPoints = mappingOriginalToSimplified.get(pair.simplifiedPoint);
-                if (originalPoints == null) {
-                    originalPoints = Set.of(pair.simplifiedPoint);
-                }
-
-                for (Point2 originalPoint : originalPoints) {
-                    int originalIndex = originalContour.getPointIndex(originalPoint);
-                    if (originalIndex < 0) {
-                        throw new IllegalStateException("Original point does not belong to original contour");
-                    }
-
-                    addIndexMapping(originalToOffset, originalIndex, offsetIndex);
-                    addIndexMapping(offsetToOriginal, offsetIndex, originalIndex);
-
-                    unusedOriginalPoints.remove(originalPoint);
-                    unusedOffsetPoints.remove(pair.offsetPoint);
-                }
-            }
-
-            if (!unusedOriginalPoints.isEmpty()) {
-                throw new IllegalStateException("Some original contour points have no correspondence");
-            }
-
-            if (!unusedOffsetPoints.isEmpty()) {
-                throw new IllegalStateException("Some offset contour points have no correspondence");
-            }
-
-            return new OffsetResult(
-                    originalContour,
-                    offsetContour,
-                    freezeIndexMap(originalToOffset),
-                    freezeIndexMap(offsetToOriginal)
+    private static Map<Integer, SortedSet<Integer>> unmodifiableIndexMap(Map<Integer, SortedSet<Integer>> source) {
+        Map<Integer, SortedSet<Integer>> result = new HashMap<>(source.size());
+        for (Map.Entry<Integer, SortedSet<Integer>> entry : source.entrySet()) {
+            result.put(
+                entry.getKey(),
+                Collections.unmodifiableSortedSet(entry.getValue())
             );
         }
-
-        /**
-         * Добавляет одно индексное соответствие в карту.
-         */
-        private static void addIndexMapping(
-                Map<Integer, SortedSet<Integer>> map,
-                int key,
-                int value
-        ) {
-            map.computeIfAbsent(key, ignored -> new TreeSet<>()).add(value);
-        }
-
-        /**
-         * Делает карту и ее множества неизменяемыми.
-         */
-        private static Map<Integer, SortedSet<Integer>> freezeIndexMap(
-                Map<Integer, SortedSet<Integer>> source
-        ) {
-            Map<Integer, SortedSet<Integer>> result = new HashMap<>(source.size());
-
-            for (Map.Entry<Integer, SortedSet<Integer>> entry : source.entrySet()) {
-                result.put(
-                        entry.getKey(),
-                        Collections.unmodifiableSortedSet(entry.getValue())
-                );
-            }
-
-            return Collections.unmodifiableMap(result);
-        }
-
-        /**
-         * Одна накопленная пара соответствующих точек.
-         */
-        private record PointPair(Point2 simplifiedPoint, Point2 offsetPoint) {
-        }
+        return Collections.unmodifiableMap(result);
     }
 }
