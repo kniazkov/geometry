@@ -297,6 +297,7 @@ public class ContourOffsetter {
         PointsMapping pointsMapping,
         List<ContourIntersection> intersections)
     {
+        intersections = ContourIntersection.sortByNesting(intersections, offsetContour.points.size());
         return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
     }
 
