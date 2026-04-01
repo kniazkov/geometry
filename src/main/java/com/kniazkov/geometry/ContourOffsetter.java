@@ -98,13 +98,13 @@ public class ContourOffsetter {
         final Optional<Node2ProcessingResult> reduced;
         if (distance > 0.0) {
             Node2ChainReducer reducer = new Node2ChainReducer(
-                absDistance * 1.1,
+                absDistance * 0.5,
                 node -> !node.isOuter()
             );
             reduced = reducer.reduce(list);
         } else {
             Node2ChainReducer reducer = new Node2ChainReducer(
-                absDistance * 1.1,
+                absDistance * 0.5,
                 node -> node.isOuter()
             );
             reduced = reducer.reduce(list);
