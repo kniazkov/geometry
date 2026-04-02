@@ -190,6 +190,15 @@ public class ContourOffsetter {
         Contour offsetContour = new Contour(offsetPoints).withType(contour.type);
 
         /*
+            Полученный контур должен иметь направление против часовой стрелки.
+            Если иначе - значит смещенный контур при смещении внутрь получился больше
+            оригинального, то есть, некуда было смещать. Возвращаем пустой результат.
+         */
+        if (!offsetContour.isCounterClockwise()) {
+            return List.of();
+        }
+
+        /*
             Проверяем на самопересечение. Если их нет, возвращаем результат.
          */
         ContourIntersectionFinder finder = new ContourIntersectionFinder(offsetContour);
@@ -297,11 +306,132 @@ public class ContourOffsetter {
         PointsMapping pointsMapping,
         List<ContourIntersection> intersections)
     {
+        /*
+            Сортируем петли. В начале списка должны оказаться петли, которые не имеют
+            внутри других петель.
+         */
         ContourIntersectionSorter intersectionSorter = new ContourIntersectionSorter(
             offsetContour,
             intersections
         );
-        return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
+
+        /*
+            Строим кольцевой граф, начиная с точки, которая не входит ни в одну петлю.
+         */
+        List<Segment2> segments = offsetContour.toSegments();
+        List<Node> nodes = new ArrayList<>(segments.size());
+        Graph mainGraph = new Graph(null);
+        Node first = new Node(segments.get(0));
+        first.graph = mainGraph;
+        nodes.add(first);
+        Node last = first;
+        for (int i = 1; i < segments.size(); i++) {
+            Segment2 segment = segments.get(i);
+            Node node = new Node(segment);
+            node.graph = mainGraph;
+            node.previous = last;
+            last.next = node;
+            last = node;
+            nodes.add(node);
+        }
+        first.previous = last;
+        last.next = first;
+        mainGraph.begin = nodes.get(intersectionSorter.freeSegmentIndex);
+
+        /*
+            Разделяем граф по точкам пересечений.
+         */
+        List<Graph> graphs = new ArrayList<>(intersections.size() + 1);
+        graphs.add(mainGraph);
+        for (ContourIntersectionSorter.LoopInfo loop : intersectionSorter.loops) {
+            if (!(loop.intersection instanceof Point2 intersection)) {
+                throw new IllegalStateException(
+                    "After the offset, only points are expected as intersections"
+                );
+            }
+
+            /*
+                Пара узлов, сегменты которых пересекаются. Траектория проходит через
+                входящий узел, образует петлю и выходит через исходящий узел.
+             */
+            Node incoming = nodes.get(loop.firstSegmentIndex);
+            Node outgoing = nodes.get(loop.secondSegmentIndex);
+
+            if (incoming.graph != outgoing.graph) {
+                throw new IllegalStateException(
+                    "Both intersection nodes must be in the same graph"
+                );
+            }
+
+            Segment2 firstSegment = incoming.segment;
+            Segment2 secondSegment = outgoing.segment;
+
+            /*
+                Первый сегмент (входящий в петлю) обрезается по точку пересечения,
+                образуя два сегмента:
+             */
+            Segment2 firstHead = new Segment2(firstSegment.a, intersection);
+            Segment2 firstTail = new Segment2(intersection, firstSegment.b);
+
+            /*
+                Второй сегмент (исходящий из петли) также обрезается по точку пересечения,
+                образуя два сегмента:
+             */
+            Segment2 secondHead = new Segment2(secondSegment.a, intersection);
+            Segment2 secondTail = new Segment2(intersection, secondSegment.b);
+
+            /*
+                Делаем новый кольцевой граф и два дополнительных узла: первый образуется из
+                хвоста первого сегмента, а второй - из головы второго сегмента.
+             */
+            Graph graph = new Graph(incoming.graph);
+            Node begin = new Node(firstTail);
+            Node end = new Node(secondHead);
+            graph.begin = begin;
+            graphs.add(graph);
+
+            /*
+                Меняем указатели, что и разделяет исходный граф на два.
+             */
+            outgoing.previous.next = end;
+            incoming.next.previous = begin;
+            begin.previous = end;
+            begin.next = incoming.next;
+            end.previous = outgoing.previous;
+            end.next = begin;
+            incoming.next = outgoing;
+            outgoing.previous = incoming;
+
+            /*
+                Выставляем новые сегменты во входящий и исходящий узлы.
+             */
+            incoming.segment = firstHead;
+            outgoing.segment = secondTail;
+
+            /*
+                Выставляем правильный референс на граф
+             */
+            Node node = begin;
+            do {
+                node.graph = graph;
+                node = node.next;
+            } while (node != end);
+        }
+
+        /*
+            Формируем результат из полученных графов.
+         */
+        List<OffsetResult> resultingList = new ArrayList<>();
+        for (Graph graph : graphs) {
+            OffsetResult result = new OffsetResult(
+                contour,
+                new Contour(graph.toPoints()),
+                pointsMapping.offsetToOriginal
+            );
+            resultingList.add(result);
+        }
+
+        return resultingList;
     }
 
     /**
@@ -335,11 +465,10 @@ public class ContourOffsetter {
      */
     private static class Graph {
         final Graph parent;
-        final Node begin;
+        Node begin;
 
-        Graph(Graph parent, Node begin) {
+        Graph(Graph parent) {
             this.parent = parent;
-            this.begin = begin;
         }
 
         List<Point2> toPoints() {
@@ -361,5 +490,9 @@ public class ContourOffsetter {
         Segment2 segment;
         Node previous;
         Node next;
+
+        Node(Segment2 segment) {
+            this.segment = segment;
+        }
     }
 }
