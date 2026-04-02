@@ -83,8 +83,9 @@ public class Test {
             ContourOffsetter offsetter = new ContourOffsetter(contour);
             List<OffsetResult> offsetList = measure(
                     "Offset",
-                    () -> offsetter.offset(-5.0)
+                    () -> offsetter.offset(-14.0)
             );
+            System.out.println("Obtain " + offsetList.size() + " contour" + (offsetList.size() > 1 ? "s" : "")  + " after offset");
             for (OffsetResult offset : offsetList) {
                 svg.addSegments(offset.contour.toSegments(), 1, offset.contour.type == Contour.Type.INNER ? "orange" : "cyan", SvgStrokeStyle.SOLID);
                 for (Integer originalIndex : offset.originalToOffset.keySet()) {
