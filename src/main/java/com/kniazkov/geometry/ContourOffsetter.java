@@ -15,7 +15,7 @@ public class ContourOffsetter {
     /**
      * Исходный контур.
      */
-    private final Contour contour;
+    private final Contour originalContour;
 
     /**
      * Максимальная длина одного добавляемого сегмента при аппроксимации дуги
@@ -26,16 +26,21 @@ public class ContourOffsetter {
      */
     private double maxArcSegmentLength = 1.0;
 
+    /**
+     * Минимальная площадь результирующего контура. Все контуры меньшей площади будут
+     * отбрасываться.
+     */
+    private double minContourArea = 100;
 
     public ContourOffsetter(Contour contour) {
-        this.contour = contour;
+        this.originalContour = contour;
     }
 
     /**
      * Возвращает исходный контур, с которым работает смещатель.
      */
-    public Contour getContour() {
-        return contour;
+    public Contour getOriginalContour() {
+        return originalContour;
     }
 
     /**
@@ -48,6 +53,17 @@ public class ContourOffsetter {
         }
 
         this.maxArcSegmentLength = length;
+    }
+
+    /**
+     * Задает минимальную площадь результирующих контуров.
+     */
+    public void setMinContourArea(double area) {
+        if (area <= 0.0) {
+            throw new IllegalArgumentException("Contour area must be positive");
+        }
+
+        this.minContourArea = area;
     }
 
     /**
@@ -64,17 +80,17 @@ public class ContourOffsetter {
          */
         if (distance == 0.0) {
             Map<Point2, Set<Point2>> mapping = new HashMap<>();
-            for (Point2 point : contour.points) {
+            for (Point2 point : originalContour.points) {
                 mapping.put(point, Set.of(point));
             }
-            return List.of(new OffsetResult(contour, contour, mapping));
+            return List.of(new OffsetResult(originalContour, originalContour, mapping));
         }
 
         /*
             Действительное смещение зависит от типа контура: для внутренних контуров положительное
             смещение означает смещение внутрь.
          */
-        if (contour.type == Contour.Type.INNER) {
+        if (originalContour.type == Contour.Type.INNER) {
             distance = -distance;
         }
 
@@ -91,7 +107,7 @@ public class ContourOffsetter {
 
             Порог берем равным абсолютной величине смещения.
          */
-        Node2 list = contour.toLinkedList();
+        Node2 list = originalContour.toLinkedList();
         double absDistance = Math.abs(distance);
 
         final Optional<Node2ProcessingResult> reduced;
@@ -119,7 +135,7 @@ public class ContourOffsetter {
         /*
             Строим упрощенный контур и массив смещенных сегментов упрощенного контура.
          */
-        Contour simplified = Contour.fromLinkedList(contour.type, reduced.get().node);
+        Contour simplified = Contour.fromLinkedList(originalContour.type, reduced.get().node);
         List<Segment2> simplifiedSegments = simplified.toSegments();
         List<Segment2> offsetSegments = new ArrayList<>(simplifiedSegments.size());
         for (Segment2 segment : simplified.toSegments()) {
@@ -187,7 +203,7 @@ public class ContourOffsetter {
         /*
             Строим контур.
          */
-        Contour offsetContour = new Contour(offsetPoints).withType(contour.type);
+        Contour offsetContour = new Contour(offsetPoints).withType(originalContour.type);
 
         /*
             Полученный контур должен иметь направление против часовой стрелки.
@@ -204,7 +220,7 @@ public class ContourOffsetter {
         ContourIntersectionFinder finder = new ContourIntersectionFinder(offsetContour);
         List<ContourIntersection> intersections = finder.findSelfIntersections();
         if (intersections.isEmpty()) {
-            return List.of(new OffsetResult(contour, offsetContour, pointsMapping.offsetToOriginal));
+            return List.of(new OffsetResult(originalContour, offsetContour, pointsMapping.offsetToOriginal));
         }
         return removeLoops(offsetContour, pointsMapping, intersections);
     }
@@ -298,8 +314,8 @@ public class ContourOffsetter {
         }
     }
 
-    /**
-     * Удаляет петли из смещенного контура, разделяя контур на несколько контуров.
+    /*
+        Удаляет петли из смещенного контура, разделяя контур на несколько контуров.
      */
     private List<OffsetResult> removeLoops(
         Contour offsetContour,
@@ -320,7 +336,7 @@ public class ContourOffsetter {
          */
         List<Segment2> segments = offsetContour.toSegments();
         List<Node> nodes = new ArrayList<>(segments.size());
-        Graph mainGraph = new Graph(null);
+        Graph mainGraph = new Graph();
         Node first = new Node(segments.get(0));
         first.graph = mainGraph;
         nodes.add(first);
@@ -384,11 +400,15 @@ public class ContourOffsetter {
                 Делаем новый кольцевой граф и два дополнительных узла: первый образуется из
                 хвоста первого сегмента, а второй - из головы второго сегмента.
              */
-            Graph graph = new Graph(incoming.graph);
+            Graph graph = new Graph();
             Node begin = new Node(firstTail);
             Node end = new Node(secondHead);
             graph.begin = begin;
             graphs.add(graph);
+
+            graph.parent = incoming.graph;
+            begin.childGraph = incoming.childGraph;
+            incoming.childGraph = graph;
 
             /*
                 Меняем указатели, что и разделяет исходный граф на два.
@@ -414,6 +434,9 @@ public class ContourOffsetter {
             Node node = begin;
             do {
                 node.graph = graph;
+                if (node.childGraph != null) {
+                    node.childGraph.parent = graph;
+                }
                 node = node.next;
             } while (node != end);
         }
@@ -423,9 +446,33 @@ public class ContourOffsetter {
          */
         List<OffsetResult> resultingList = new ArrayList<>();
         for (Graph graph : graphs) {
+            /*
+                Петли, образованные нечетным количеством пересечений отбрасываются.
+             */
+            if (graph.getCountOfIntersections() % 2 != 0) {
+                continue;
+            }
+
+            /*
+                Петли с количеством точек меньше 3 отбрасываются.
+             */
+            List<Point2> points = graph.toPoints();
+            if (points.size() < 3) {
+                continue;
+            }
+
+            /*
+                Петли с ничтожной площадью отбрасываются.
+             */
+            Contour contour = new Contour(points);
+            double area = Math.abs(contour.getSignedArea());
+            if (area < minContourArea) {
+                continue;
+            }
+
             OffsetResult result = new OffsetResult(
+                originalContour,
                 contour,
-                new Contour(graph.toPoints()),
                 pointsMapping.offsetToOriginal
             );
             resultingList.add(result);
@@ -464,12 +511,8 @@ public class ContourOffsetter {
      * Кольцевой граф, содержащий сегменты контура.
      */
     private static class Graph {
-        final Graph parent;
+        Graph parent;
         Node begin;
-
-        Graph(Graph parent) {
-            this.parent = parent;
-        }
 
         List<Point2> toPoints() {
             final List<Point2> list = new ArrayList<>();
@@ -480,6 +523,20 @@ public class ContourOffsetter {
             } while (node != begin);
             return list;
         }
+
+        /**
+         * Возвращает число пересечений исходного контура, которые образуют эту петлю.
+         * Считается по количеству родительских графов.
+         */
+        int getCountOfIntersections() {
+            int count = 0;
+            Graph graph = parent;
+            while (graph != null) {
+                count++;
+                graph = graph.parent;
+            }
+            return count;
+        }
     }
 
     /**
@@ -487,6 +544,7 @@ public class ContourOffsetter {
      */
     private static class Node {
         Graph graph;
+        Graph childGraph; // граф, полученный в этой точке в результате разделения
         Segment2 segment;
         Node previous;
         Node next;
