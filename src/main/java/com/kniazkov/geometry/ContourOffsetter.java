@@ -178,7 +178,10 @@ public class ContourOffsetter {
 
                 if (value instanceof Point2 offsetPoint) {
                     offsetPoints.add(offsetPoint);
-                    pointsMapping.addPair(previousSimplifiedSegment.b, offsetPoint);
+                    pointsMapping.addPairSimplifiedToOffset(
+                        previousSimplifiedSegment.b,
+                        offsetPoint
+                    );
                 } else if (value instanceof Segment2) {
                     throw new IllegalStateException("Unexpected overlapping offset segments");
                 } else {
@@ -310,7 +313,7 @@ public class ContourOffsetter {
                     c.y + radius * Math.sin(angle)
             );
             points.add(point);
-            pointsMapping.addPair(c, point);
+            pointsMapping.addPairSimplifiedToOffset(c, point);
         }
     }
 
@@ -444,12 +447,13 @@ public class ContourOffsetter {
         /*
             Формируем результат из полученных графов.
          */
-        List<OffsetResult> resultingList = new ArrayList<>();
+        List<Contour> offsetContours = new ArrayList<>();
         for (Graph graph : graphs) {
             /*
                 Петли, образованные нечетным количеством пересечений отбрасываются.
              */
             if (graph.getCountOfIntersections() % 2 != 0) {
+                mapAllPointsToSinglePoint(graph, pointsMapping);
                 continue;
             }
 
@@ -458,6 +462,7 @@ public class ContourOffsetter {
              */
             List<Point2> points = graph.toPoints();
             if (points.size() < 3) {
+                mapAllPointsToSinglePoint(graph, pointsMapping);
                 continue;
             }
 
@@ -467,9 +472,15 @@ public class ContourOffsetter {
             Contour contour = new Contour(points);
             double area = Math.abs(contour.getSignedArea());
             if (area < minContourArea) {
+                mapAllPointsToSinglePoint(graph, pointsMapping);
                 continue;
             }
 
+            offsetContours.add(contour);
+        }
+
+        List<OffsetResult> resultingList = new ArrayList<>();
+        for(Contour contour : offsetContours) {
             OffsetResult result = new OffsetResult(
                 originalContour,
                 contour,
@@ -479,6 +490,23 @@ public class ContourOffsetter {
         }
 
         return resultingList;
+    }
+
+    /**
+     * Сопоставляет все точки исходного графа с одной точкой удаляемого графа -
+     * с его начальной точкой.
+     */
+    private static void mapAllPointsToSinglePoint(Graph graph, PointsMapping mapping) {
+        Node node = graph.begin;
+        Set<Point2> simplified = new HashSet<>();
+        do {
+            simplified.addAll(mapping.offsetToOriginal.getOrDefault(node.segment.a, Set.of()));
+            node = node.next;
+        } while(node != graph.begin);
+        for (Point2 point : simplified) {
+            mapping.removeOriginal(point);
+            mapping.addPairOriginalToOffset(point, graph.begin.segment.a);
+        }
     }
 
     /**
@@ -495,7 +523,7 @@ public class ContourOffsetter {
             this.offsetToOriginal = new HashMap<>();
         }
 
-        public void addPair(Point2 simplified, Point2 offset) {
+        public void addPairSimplifiedToOffset(Point2 simplified, Point2 offset) {
             Set<Point2> original = simplifiedToOriginal.get(simplified);
             if (original == null) {
                 throw new IllegalStateException("Can't find the original points");
@@ -504,6 +532,20 @@ public class ContourOffsetter {
                 originalToOffset.computeIfAbsent(point, x -> new HashSet<>()).add(offset);
             }
             offsetToOriginal.computeIfAbsent(offset, x -> new HashSet<>()).addAll(original);
+        }
+
+        public void removeOriginal(Point2 original) {
+            Set<Point2> offset = originalToOffset.remove(original);
+            if (offset != null) {
+                for (Point2 point : offset) {
+                    offsetToOriginal.remove(point);
+                }
+            }
+        }
+
+        public void addPairOriginalToOffset(Point2 original, Point2 offset) {
+            originalToOffset.computeIfAbsent(original, x -> new HashSet<>()).add(offset);
+            offsetToOriginal.computeIfAbsent(offset, x -> new HashSet<>()).add(original);
         }
     }
 

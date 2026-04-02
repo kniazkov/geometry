@@ -54,7 +54,7 @@ public class OffsetResult {
 
         for (int offsetIndex = 0; offsetIndex < offsetContour.points.size(); offsetIndex++) {
             Point2 offsetPoint = offsetContour.points.get(offsetIndex);
-            Set<Point2> originalPoints = offsetToOriginalPoints.computeIfAbsent(offsetPoint, x -> Set.of());
+            Set<Point2> originalPoints = offsetToOriginalPoints.getOrDefault(offsetPoint, Set.of());
             Set<Integer> originalIndices = offsetToOriginalIndices.computeIfAbsent(offsetIndex, x -> new TreeSet<>());
             for (Point2 originalPoint : originalPoints) {
                 int originalIndex = originalContour.getPointIndex(originalPoint);
