@@ -22,10 +22,13 @@ public class ContourIntersectionFinder {
     private final List<Segment2> segments;
     private final SegmentIntersectionMap intersectionMap;
 
+    public ContourIntersectionFinder(List<Segment2> segments) {
+        this.segments = segments;
+        this.intersectionMap = new SegmentIntersectionMap(segments);
+    }
 
     public ContourIntersectionFinder(Contour contour) {
-        this.segments = contour.toSegments();
-        this.intersectionMap = new SegmentIntersectionMap(segments);
+        this(contour.toSegments());
     }
 
     /**
