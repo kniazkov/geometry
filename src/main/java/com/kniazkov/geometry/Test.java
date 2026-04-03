@@ -80,10 +80,11 @@ public class Test {
 
         for (Contour contour : classified) {
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
+            /*
             ContourOffsetter offsetter = new ContourOffsetter(contour);
             List<OffsetResult> offsetList = measure(
                     "Offset",
-                    () -> offsetter.offset(-14.0)
+                    () -> offsetter.offset(-15.0)
             );
             System.out.println("Obtain " + offsetList.size() + " contour" + (offsetList.size() > 1 ? "s" : "")  + " after offset");
             for (OffsetResult offset : offsetList) {
@@ -99,8 +100,20 @@ public class Test {
                     }
                 }
             }
+             */
+            Node2 begin = contour.toLinkedList();
+            Node2 node = begin;
+            do {
+                Segment2 bisect = node.buildBisectorSegment(-30);
+                svg.addSegments(
+                    List.of(bisect),
+                    1,
+                    "gray",
+                    SvgStrokeStyle.SOLID
+                );
+                node = node.getNext();
+            } while (node != begin);
         }
-
         svg.save(Paths.get("result.svg"), 0.2);
     }
 

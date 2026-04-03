@@ -1,6 +1,7 @@
 package com.kniazkov.geometry;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -76,6 +77,24 @@ public class ContourIntersectionFinder {
         }
 
         return result;
+    }
+
+    /**
+     * Ищет все пересечения базового контура с одним сегментом.
+     */
+    public List<ContourIntersection> findIntersections(Segment2 segment) {
+        List<ContourIntersection> result = new ArrayList<>();
+        Set<Integer> candidates = intersectionMap.find(segment);
+
+        for (int index : candidates) {
+            Segment2 candidate = segments.get(index);
+            Optional<SegmentIntersection> intersection = candidate.intersect(segment);
+            if (intersection.isPresent()) {
+                result.add(new ContourIntersection(intersection.get(), index, -1));
+            }
+        }
+
+        return Collections.unmodifiableList(result);
     }
 
     /**
