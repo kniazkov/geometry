@@ -1,6 +1,9 @@
 package com.kniazkov.geometry;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Делит кольцо узлов по "плохим" точкам, найденным с помощью биссектрис.
@@ -36,6 +39,46 @@ public class Node2BisectorDivider {
      * найденным пересечением внутренних биссектрис с трассой.
      */
     public List<Node2ProcessingResult> divide(Node2 begin) {
+        List<Node2> nodes = Node2.toNodes(begin);
+        ContourIntersectionFinder finder = new ContourIntersectionFinder(
+            Node2.toSegments(begin)
+        );
+        Set<Node2> bad = new HashSet<>();
+
+        for (int i = 0; i < nodes.size(); i++) {
+            int j = (i - 1 + nodes.size()) % nodes.size();
+
+            /*
+                Строим биссектрису и находим ее пересечение с контуром.
+             */
+            Node2 node = nodes.get(i);
+            Segment2 bisect = node.buildBisectorSegment(bisectLength * 2);
+            List<ContourIntersection> intersections = finder.findIntersections(bisect);
+
+            for (ContourIntersection intersection : intersections) {
+                /*
+                    Два индекса надо удалить - текущий сегмент (узел) и предыдущий, так как
+                    они сами по себе входят в пересечение.
+                 */
+                if (intersection.firstSegmentIndex == i || intersection.firstSegmentIndex == j) {
+                    continue;
+                }
+
+                if (!(intersection.intersection instanceof Point2 point)) {
+                    continue;
+                }
+
+                /*
+                    Если мы здесь, пересечение с контуром найдено, и оно дает два "плохих" узла:
+                    текущий узел и узел, который образуется в результате пересечения.
+                 */
+                bad.add(node);
+                Node2 inserted = new Node2(point);
+                nodes.get(intersection.firstSegmentIndex).insertAfter(inserted);
+                bad.add(inserted);
+            }
+        }
+
         return List.of();
     }
 }

@@ -101,18 +101,8 @@ public class Test {
                 }
             }
              */
-            Node2 begin = contour.toLinkedList();
-            Node2 node = begin;
-            do {
-                Segment2 bisect = node.buildBisectorSegment(-30);
-                svg.addSegments(
-                    List.of(bisect),
-                    1,
-                    "gray",
-                    SvgStrokeStyle.SOLID
-                );
-                node = node.getNext();
-            } while (node != begin);
+            Node2BisectorDivider divider = new Node2BisectorDivider(-15);
+            divider.divide(contour.toLinkedList());
         }
         svg.save(Paths.get("result.svg"), 0.2);
     }

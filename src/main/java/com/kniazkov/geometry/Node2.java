@@ -145,6 +145,26 @@ public class Node2 {
     }
 
     /**
+     * Вставляет указанный узел сразу после текущего узла.
+     *
+     * После вставки корректно обновляются связи соседних узлов
+     * и пересчитывается геометрическая информация затронутых узлов.
+     */
+    public void insertAfter(Node2 node) {
+        Node2 oldNext = next;
+
+        node.previous = this;
+        node.next = oldNext;
+
+        next = node;
+        oldNext.previous = node;
+
+        update();
+        node.update();
+        oldNext.update();
+    }
+
+    /**
      * Удаляет текущий узел из двусвязного циклического списка.
      *
      * После удаления соседние узлы соединяются друг с другом и пересчитывают
@@ -190,6 +210,22 @@ public class Node2 {
 
         do {
             list.add(node.point);
+            node = node.next;
+        } while (node != start);
+
+        return Collections.unmodifiableList(list);
+    }
+
+
+    /**
+     * Собирает точки кольца как сегменты в список в порядке обхода.
+     */
+    public static List<Segment2> toSegments(Node2 start) {
+        List<Segment2> list = new ArrayList<>();
+        Node2 node = start;
+
+        do {
+            list.add(new Segment2(node.point, node.next.point));
             node = node.next;
         } while (node != start);
 
