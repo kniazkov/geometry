@@ -103,6 +103,48 @@ public class Node2 {
     }
 
     /**
+     * Строит отрезок, начинающийся в текущей точке
+     * и направленный по биссектрисе угла в узле.
+     *
+     * Модуль distance задает длину отрезка.
+     * Если distance положительный, отрезок направляется наружу трассы.
+     * Если distance отрицательный, отрезок направляется внутрь.
+     */
+    public Segment2 buildBisectorSegment(double distance) {
+        if (Math.abs(distance) <= Point2.EPSILON) {
+            return new Segment2(point, point);
+        }
+
+        /*
+            Складываем правые единичные нормали к сегментам:
+            previous -> point
+            point -> next
+         */
+        double bx =
+            (point.y - previous.point.y) / distanceToPrevious +
+                (next.point.y - point.y) / distanceToNext;
+
+        double by =
+            (previous.point.x - point.x) / distanceToPrevious +
+                (point.x - next.point.x) / distanceToNext;
+
+        double bisectorLength = Math.hypot(bx, by);
+        if (bisectorLength <= Point2.EPSILON) {
+            throw new IllegalStateException("Cannot build bisector");
+        }
+
+        double scale = distance / bisectorLength;
+
+        return new Segment2(
+            point,
+            new Point2(
+                point.x + bx * scale,
+                point.y + by * scale
+            )
+        );
+    }
+
+    /**
      * Удаляет текущий узел из двусвязного циклического списка.
      *
      * После удаления соседние узлы соединяются друг с другом и пересчитывают
