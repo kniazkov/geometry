@@ -3,6 +3,7 @@ package com.kniazkov.geometry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -79,6 +80,111 @@ public class Node2BisectorDivider {
             }
         }
 
-        return List.of();
+        /*
+            Если нет "плохих" точек, возвращается исходное кольцо.
+         */
+        if (bad.isEmpty()) {
+            return List.of(new Node2ProcessingResult(begin, Map.of()));
+        }
+
+        /*
+            Если есть "плохие" точки, кольцо разделяется на секции,
+            которые не содержат таких точек.
+         */
+        List<Section> sections = splitToSections(begin, bad);
+
+        /*
+            Вырезаем кольца по сегментам.
+         */
+        List<Node2> cuttings = new ArrayList<>();
+        for (Section section : sections) {
+            section.first.cutTo(section.last);
+            cuttings.add(section.first);
+        }
+
+        /*
+            Формируем результат.
+         */
+        List<Node2ProcessingResult> result = new ArrayList<>();
+        for (Node2 node : cuttings) {
+            result.add(new Node2ProcessingResult(node, Map.of()));
+        }
+
+        return result;
+    }
+
+    /**
+     * Разделяет кольцо на сегменты, которые не содержат "плохих" точек.
+     */
+    private static List<Section> splitToSections(Node2 begin, Set<Node2> bad) {
+        List<Section> sections = new ArrayList<>();
+
+        /*
+            Ищем любую "плохую" точку, от которой удобно начать обход.
+         */
+        Node2 startBad = begin;
+        while (!bad.contains(startBad)) {
+            startBad = startBad.getNext();
+        }
+
+        Node2 cursor = startBad;
+
+        do {
+            /*
+                Пропускаем подряд идущие "плохие" точки.
+             */
+            while (bad.contains(cursor.getNext())) {
+                cursor = cursor.getNext();
+                if (cursor == startBad) {
+                    break;
+                }
+            }
+
+            /*
+                Если после пропуска снова пришли в стартовую точку,
+                значит хороших секций больше нет.
+             */
+            if (cursor.getNext() == startBad) {
+                break;
+            }
+
+            /*
+                Начинаем секцию сразу после последней "плохой" точки в серии.
+             */
+            Node2 first = cursor.getNext();
+            Node2 last = first;
+
+            /*
+                Идем, пока не встретим следующую "плохую" точку.
+             */
+            while (!bad.contains(last.getNext())) {
+                last = last.getNext();
+            }
+
+            /*
+                Если от начального до конечного узла больше 2 точек, то они могут образовать
+                кольцо, и добавляются в список сегментов.
+             */
+            if (first.numberOfNodesTo(last) >= 2) {
+                Section section = new Section(first, last);
+                sections.add(section);
+            }
+
+            /*
+                Переходим к следующей серии "плохих" точек.
+             */
+            cursor = last.getNext();
+        } while (cursor != startBad);
+        return sections;
+    }
+
+    private static class Section {
+        public final Node2 first;
+        public final Node2 last;
+
+        private Section(Node2 first, Node2 last) {
+            this.first = first;
+            this.last = last;
+        }
     }
 }

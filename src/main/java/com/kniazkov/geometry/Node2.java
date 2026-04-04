@@ -103,6 +103,26 @@ public class Node2 {
     }
 
     /**
+     * Возвращает расстояние в узлах от текущего узла до указанного узла
+     * при движении вперед по кольцу.
+     *
+     * Если target совпадает с текущим узлом, возвращается 0.
+     */
+    public int numberOfNodesTo(Node2 target) {
+        int count = 0;
+        Node2 node = this;
+        do {
+            if (node == target) {
+                return count;
+            }
+            node = node.next;
+            count++;
+        } while (node != this);
+
+        throw new IllegalArgumentException("Target node does not belong to this ring");
+    }
+
+    /**
      * Строит отрезок, начинающийся в текущей точке
      * и направленный по биссектрисе угла в узле.
      *
@@ -162,6 +182,49 @@ public class Node2 {
         update();
         node.update();
         oldNext.update();
+    }
+
+    /**
+     * Вырезает из кольца участок от текущего узла до указанного узла включительно
+     * и превращает этот участок в отдельное кольцо.
+     *
+     * Текущий узел становится первым узлом нового кольца,
+     * а узел last - последним.
+     *
+     * При этом исходное кольцо "сшивается" через:
+     * - this.previous
+     * - last.next
+     *
+     * Если last.next == this, текущий участок уже образует отдельное кольцо,
+     * и делать ничего не нужно.
+     */
+    public void cutTo(Node2 last) {
+        if (last.next == this) {
+            return;
+        }
+
+        Node2 beforeFirst = previous;
+        Node2 afterLast = last.next;
+
+        /*
+            Замыкаем вырезанный участок в отдельное кольцо.
+         */
+        previous = last;
+        last.next = this;
+
+        /*
+            Сшиваем оставшуюся часть исходного кольца.
+         */
+        beforeFirst.next = afterLast;
+        afterLast.previous = beforeFirst;
+
+        /*
+            Пересчитываем геометрию в точках разреза.
+         */
+        update();
+        last.update();
+        beforeFirst.update();
+        afterLast.update();
     }
 
     /**
