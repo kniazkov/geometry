@@ -100,12 +100,12 @@ public class Test {
                     }
                 }
             }
-             */
             Node2BisectorDivider divider = new Node2BisectorDivider(-15);
             List<Node2ProcessingResult> dividedList = divider.divide(contour.toLinkedList());
             for (Node2ProcessingResult divided : dividedList) {
                 svg.addSegments(Node2.toSegments(divided.node), 1, "orange", SvgStrokeStyle.SOLID);
             }
+             */
         }
         svg.save(Paths.get("result.svg"), 0.2);
     }
