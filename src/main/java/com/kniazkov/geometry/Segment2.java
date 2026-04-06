@@ -247,4 +247,13 @@ public class Segment2 implements SegmentIntersection {
             b.add(shift)
         );
     }
+
+    /**
+     * Возвращает прямую, на которой лежит этот отрезок.
+     *
+     * Для вырожденного отрезка, сведенного к точке, прямая не определена.
+     */
+    public Line2 toLine() {
+        return Line2.fromPoints(a, b);
+    }
 }
