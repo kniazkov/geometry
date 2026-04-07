@@ -82,7 +82,7 @@ public class Test {
         for (Contour contour : classified) {
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
             LoopFinder loopFinder = new LoopFinder(contour);
-            Map<Integer, Integer> shorts = loopFinder.findCorrespondingPairs(-15);
+            Map<Integer, Integer> shorts = loopFinder.findCorrespondingPairs(15);
             for (Map.Entry<Integer, Integer> bad : shorts.entrySet()) {
                 svg.addSegments(
                         List.of(

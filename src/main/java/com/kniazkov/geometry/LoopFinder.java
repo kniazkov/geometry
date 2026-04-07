@@ -62,9 +62,9 @@ public class LoopFinder {
                  */
                 boolean matches;
                 if (distance < 0.0) {
-                    matches = hasPartInsideContour(segment);
+                    matches = isFullyInsideContour(segment);
                 } else if (distance > 0.0) {
-                    matches = hasPartOutsideContour(segment);
+                    matches = isFullyOutsideContour(segment);
                 } else {
                     matches = false;
                 }
@@ -311,5 +311,217 @@ public class LoopFinder {
         }
 
         return false;
+    }
+
+    /**
+     * Возвращает true, если весь указанный сегмент лежит внутри контура.
+     *
+     * Метод работает так:
+     * - находит все пересечения сегмента с границей контура
+     * - раскладывает сегмент на участки между соседними точками пересечения
+     * - для каждого непустого участка проверяет середину
+     *
+     * Если хотя бы один такой участок имеет середину снаружи контура,
+     * значит весь сегмент внутри не лежит.
+     *
+     * Совпадение с границей само по себе внутренним участком не считается.
+     */
+    private boolean isFullyInsideContour(Segment2 segment) {
+        List<Double> parameters = new java.util.ArrayList<>();
+        parameters.add(0.0);
+        parameters.add(1.0);
+
+        /*
+            Собираем все параметры t точек пересечения сегмента с границей контура.
+         */
+        for (ContourIntersection intersection : intersectionFinder.findIntersections(segment)) {
+            if (intersection.intersection instanceof Point2 point) {
+                double t;
+                double dx = segment.b.x - segment.a.x;
+                double dy = segment.b.y - segment.a.y;
+
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                    if (Math.abs(dx) <= Point2.EPSILON) {
+                        continue;
+                    }
+                    t = (point.x - segment.a.x) / dx;
+                } else {
+                    if (Math.abs(dy) <= Point2.EPSILON) {
+                        continue;
+                    }
+                    t = (point.y - segment.a.y) / dy;
+                }
+
+                if (t >= -Point2.EPSILON && t <= 1.0 + Point2.EPSILON) {
+                    parameters.add(Math.max(0.0, Math.min(1.0, t)));
+                }
+            } else if (intersection.intersection instanceof Segment2 overlap) {
+                double dx = segment.b.x - segment.a.x;
+                double dy = segment.b.y - segment.a.y;
+
+                Point2[] points = {overlap.a, overlap.b};
+                for (Point2 point : points) {
+                    double t;
+
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        if (Math.abs(dx) <= Point2.EPSILON) {
+                            continue;
+                        }
+                        t = (point.x - segment.a.x) / dx;
+                    } else {
+                        if (Math.abs(dy) <= Point2.EPSILON) {
+                            continue;
+                        }
+                        t = (point.y - segment.a.y) / dy;
+                    }
+
+                    if (t >= -Point2.EPSILON && t <= 1.0 + Point2.EPSILON) {
+                        parameters.add(Math.max(0.0, Math.min(1.0, t)));
+                    }
+                }
+            }
+        }
+
+        parameters.sort(Double::compare);
+
+        /*
+            Удаляем почти совпадающие параметры.
+         */
+        List<Double> unique = new java.util.ArrayList<>();
+        for (double t : parameters) {
+            if (unique.isEmpty() || Math.abs(t - unique.get(unique.size() - 1)) > Point2.EPSILON) {
+                unique.add(t);
+            }
+        }
+
+        boolean hasInteriorPart = false;
+
+        /*
+            Все непустые участки между соседними точками пересечения
+            должны иметь середину внутри контура.
+         */
+        for (int i = 0; i < unique.size() - 1; i++) {
+            double t1 = unique.get(i);
+            double t2 = unique.get(i + 1);
+
+            if (t2 - t1 <= Point2.EPSILON) {
+                continue;
+            }
+
+            Point2 midpoint = segment.pointAt((t1 + t2) * 0.5);
+            if (!contour.containsPoint(midpoint)) {
+                return false;
+            }
+
+            hasInteriorPart = true;
+        }
+
+        return hasInteriorPart;
+    }
+
+    /**
+     * Возвращает true, если весь указанный сегмент лежит снаружи контура.
+     *
+     * Метод работает так:
+     * - находит все пересечения сегмента с границей контура
+     * - раскладывает сегмент на участки между соседними точками пересечения
+     * - для каждого непустого участка проверяет середину
+     *
+     * Если хотя бы один такой участок имеет середину внутри контура,
+     * значит весь сегмент снаружи не лежит.
+     *
+     * Совпадение с границей само по себе внешним участком не считается.
+     */
+    private boolean isFullyOutsideContour(Segment2 segment) {
+        List<Double> parameters = new java.util.ArrayList<>();
+        parameters.add(0.0);
+        parameters.add(1.0);
+
+        /*
+            Собираем все параметры t точек пересечения сегмента с границей контура.
+         */
+        for (ContourIntersection intersection : intersectionFinder.findIntersections(segment)) {
+            if (intersection.intersection instanceof Point2 point) {
+                double t;
+                double dx = segment.b.x - segment.a.x;
+                double dy = segment.b.y - segment.a.y;
+
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                    if (Math.abs(dx) <= Point2.EPSILON) {
+                        continue;
+                    }
+                    t = (point.x - segment.a.x) / dx;
+                } else {
+                    if (Math.abs(dy) <= Point2.EPSILON) {
+                        continue;
+                    }
+                    t = (point.y - segment.a.y) / dy;
+                }
+
+                if (t >= -Point2.EPSILON && t <= 1.0 + Point2.EPSILON) {
+                    parameters.add(Math.max(0.0, Math.min(1.0, t)));
+                }
+            } else if (intersection.intersection instanceof Segment2 overlap) {
+                double dx = segment.b.x - segment.a.x;
+                double dy = segment.b.y - segment.a.y;
+
+                Point2[] points = {overlap.a, overlap.b};
+                for (Point2 point : points) {
+                    double t;
+
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        if (Math.abs(dx) <= Point2.EPSILON) {
+                            continue;
+                        }
+                        t = (point.x - segment.a.x) / dx;
+                    } else {
+                        if (Math.abs(dy) <= Point2.EPSILON) {
+                            continue;
+                        }
+                        t = (point.y - segment.a.y) / dy;
+                    }
+
+                    if (t >= -Point2.EPSILON && t <= 1.0 + Point2.EPSILON) {
+                        parameters.add(Math.max(0.0, Math.min(1.0, t)));
+                    }
+                }
+            }
+        }
+
+        parameters.sort(Double::compare);
+
+        /*
+            Удаляем почти совпадающие параметры.
+         */
+        List<Double> unique = new java.util.ArrayList<>();
+        for (double t : parameters) {
+            if (unique.isEmpty() || Math.abs(t - unique.get(unique.size() - 1)) > Point2.EPSILON) {
+                unique.add(t);
+            }
+        }
+
+        boolean hasExteriorPart = false;
+
+        /*
+            Все непустые участки между соседними точками пересечения
+            должны иметь середину снаружи контура.
+         */
+        for (int i = 0; i < unique.size() - 1; i++) {
+            double t1 = unique.get(i);
+            double t2 = unique.get(i + 1);
+
+            if (t2 - t1 <= Point2.EPSILON) {
+                continue;
+            }
+
+            Point2 midpoint = segment.pointAt((t1 + t2) * 0.5);
+            if (contour.containsPoint(midpoint)) {
+                return false;
+            }
+
+            hasExteriorPart = true;
+        }
+
+        return hasExteriorPart;
     }
 }
