@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Test {
 
@@ -13,7 +14,7 @@ public class Test {
 
         Model model = measure(
             "Load STL",
-            () -> loader.load(Paths.get("D:\\ss.stl"))
+            () -> loader.load(Paths.get("models\\ss.stl"))
         );
 
         System.out.println("Loaded " + model.triangles.size() + " triangles");
@@ -80,6 +81,22 @@ public class Test {
 
         for (Contour contour : classified) {
             svg.addSegments(contour.toSegments(), 1, contour.type == Contour.Type.INNER ? "red" : "blue", SvgStrokeStyle.SOLID);
+            LoopFinder loopFinder = new LoopFinder(contour);
+            Map<Integer, Integer> shorts = loopFinder.findCorrespondingPairs(15);
+            for (Map.Entry<Integer, Integer> bad : shorts.entrySet()) {
+                svg.addSegments(
+                        List.of(
+                            new Segment2(
+                                    contour.points.get(bad.getKey()),
+                                    contour.points.get(bad.getValue())
+                            )
+                        ),
+                        1,
+                        "orange",
+                        SvgStrokeStyle.SOLID
+                );
+            }
+
             /*
             ContourOffsetter offsetter = new ContourOffsetter(contour);
             List<OffsetResult> offsetList = measure(
